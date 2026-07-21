@@ -259,7 +259,7 @@ def my_impact(y_true, pd_pred, pd_threshold=0.20):
     table = table[table["share_before"] > 0]
 
     print('\n--- final table')
-    print(table)
+    display(table.style.hide(axis="index"))
 
     ### ===== PLOTTING =====
 
@@ -337,7 +337,7 @@ def my_impact(y_true, pd_pred, pd_threshold=0.20):
 
     # default contribution
     table["default_contribution"] = table["share_before"] * table["default_rate_before"]
-    print(table)
+    display(table.style.hide(axis="index"))
 
 # function: display EL table
 

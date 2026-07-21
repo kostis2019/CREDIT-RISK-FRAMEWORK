@@ -44,7 +44,7 @@ def my_input_load(year_start, year_end, columns_to_use=None):
 
 # split train/test/oot datasets
 
-def my_time_split(full_dataset, train_yr_start, train_yr_end, test_yr_start, test_yr_end):
+def my_time_split_v0(full_dataset, train_yr_start, train_yr_end, test_yr_start, test_yr_end):
 
     # train/test window
     trai = full_dataset[(full_dataset["LoanYear"] >= train_yr_start) & (full_dataset["LoanYear"] <= train_yr_end)]
@@ -77,6 +77,56 @@ def my_time_split(full_dataset, train_yr_start, train_yr_end, test_yr_start, tes
     print("Test default rate :", y_test.mean())
 
     return X_trai, y_trai, X_test, y_test
+
+def my_time_split(df, date_column, windows, target="default12", features_excl=None, verbose=True,):
+
+        if features_excl is None:
+            features_excl = ["LoanDate","DefaultDate","LoanYear","Country","CreditScoreEsMicroL","NrOfDependants","LoanApplicationStartedDate","FirstPaymentDate"]
+
+        splits = {}
+
+        feature_cols = [
+            c for c in df.columns
+            if c not in features_excl + [target]
+        ]
+
+        for name, (start_year, end_year) in windows.items():
+
+            mask = (
+                (df[date_column] >= start_year) &
+                (df[date_column] <= end_year)
+            )
+
+            df_split = df.loc[mask].copy()
+
+            splits[name] = {
+                "df": df_split,
+                "X": df_split[feature_cols],
+                "y": df_split[target],
+                "years": (start_year, end_year),
+                "n_rows": len(df_split),
+                "default_rate": df_split[target].mean(),
+            }
+
+        if verbose:
+
+            print("\n" + "=" * 60)
+            print("SPLIT SUMMARY")
+            print("=" * 60)
+
+            for name, split in splits.items():
+
+                print(f"\n{name.upper()}")
+                print(f"Years        : {split['years'][0]} - {split['years'][1]}")
+                print(f"Shape (X, y) : {split['X'].shape}, {split['y'].shape}")
+
+                print("\nLoanYear distribution")
+                print(split["df"][date_column].value_counts().sort_index())
+
+                print(f"\nDefault rate : {split['y'].mean():.4f}")
+                print("-" * 60)
+
+        return splits
 
 # transformer: replace -1s
 
