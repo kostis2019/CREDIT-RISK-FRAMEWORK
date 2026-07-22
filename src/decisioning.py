@@ -3,10 +3,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 from IPython.display import display
+from src.utils import display_table
 
 # plot: pd threshold investigation and plot
 
-def my_thresholds(y_true, pd_pred, pd_thresholds):
+def show_approval_vs_default_on_thresholds(y_true, pd_pred, pd_thresholds):
 
     probab = pd_pred
     target = y_true
@@ -70,7 +71,7 @@ def my_thresholds(y_true, pd_pred, pd_thresholds):
 
 # plot: pd threshold investigation and plot (LinkedIn version)
 
-def my_thresholds_li(y_true, pd_pred, pd_thresholds):
+def show_approval_vs_default_on_thresholds_l(y_true, pd_pred, pd_thresholds):
 
     probab = pd_pred
     target = y_true
@@ -259,7 +260,7 @@ def my_impact(y_true, pd_pred, pd_threshold=0.20):
     table = table[table["share_before"] > 0]
 
     print('\n--- final table')
-    display(table.style.hide(axis="index"))
+    display_table(table)
 
     ### ===== PLOTTING =====
 
@@ -337,7 +338,7 @@ def my_impact(y_true, pd_pred, pd_threshold=0.20):
 
     # default contribution
     table["default_contribution"] = table["share_before"] * table["default_rate_before"]
-    display(table.style.hide(axis="index"))
+    display_table(table)
 
 # function: display EL table
 
