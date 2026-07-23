@@ -3,6 +3,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 from IPython.display import display
+from src.calibration import intercept_recalibration, PDCalibrator
+from src.metrics import my_metrics
+from src.modelling import apply_pipe
+from src.plots import my_calibration
 from src.utils import display_table
 
 # plot: pd threshold investigation and plot
@@ -355,3 +359,101 @@ def display_el(table):
         )
     )
     print("-" * 50)
+
+# process: compare calibration windows
+
+def compare_calibration_windows(X_sample, y_sample, calibration_windows, pipeline):
+
+    results = {}
+
+    for name, run_data in calibration_windows.items():
+
+        print("=" * 70)
+        print(f"Run name: {name}")
+        print("=" * 70)
+
+        ###################################################
+        # calibration training sample
+        ###################################################
+
+        print("-" * 40)
+        print(f"applying pipeline...")
+
+        predictions_cal   = apply_pipe(run_data["X"], pipeline)
+
+        print("-" * 40)
+        print(f"training calibration...")
+
+        y_pred_cal, delta = intercept_recalibration(run_data["y"], predictions_cal["PD"])
+        print(f"Intercept shift (delta): {delta:.6f}")
+
+        ###################################################
+        # sample to apply (before calibration)
+        ###################################################
+
+        print("-" * 40)
+        print("BEFORE CALIBRATION")
+        print("-" * 40)
+    
+        print("-" * 40)
+        print(f"applying pipeline...")
+
+        predictions_sample = apply_pipe(X_sample, pipeline)
+
+        my_calibration(y_sample, predictions_sample["PD"], show_cal_table=False, plot_title="uncalibrated sample")
+
+        metrics_before = my_metrics(
+            y_true=y_sample,
+            pd_pred=predictions_sample["PD"],
+            exposure=predictions_sample["Amount"],
+            el=predictions_sample["EL"],
+            dataset_name=f"OOT ({name})",
+        )
+
+        ###################################################
+        # train calibration
+        ###################################################
+
+        calibrator = PDCalibrator(method="shift", shift=delta)
+        calibrator.fit(predictions_cal, run_data["y"])
+
+        ###################################################
+        # calibrate sample
+        ###################################################
+
+        print("-" * 40)
+        print(f"calibrating sample...")
+
+        predictions_sample = calibrator.transform(predictions_sample)
+        predictions_sample["EL"] = (predictions_sample["PD"] * predictions_sample["Amount"] * predictions_sample["LossGivenDefault"])
+
+        ###################################################
+        # sample to apply (after calibration)
+        ###################################################
+
+        print("-" * 40)
+        print("AFTER CALIBRATION")
+        print("-" * 40)
+
+        my_calibration(y_sample, predictions_sample["PD"], show_cal_table=False, plot_title="calibrated sample")
+
+        metrics_after = my_metrics(
+            y_true=y_sample,
+            pd_pred=predictions_sample["PD"],
+            exposure=predictions_sample["Amount"],
+            el=predictions_sample["EL"],
+            dataset_name=f"OOT ({name})",
+        )
+
+        ###################################################
+        # save
+        ###################################################
+
+        results[name] = {
+            "delta": delta,
+            "predictions": predictions_sample.copy(),
+            "metrics_before": metrics_before,
+            "metrics_after": metrics_after,
+        }
+
+    return results

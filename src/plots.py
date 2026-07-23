@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 from IPython.display import display
+from src.utils import display_table
 
 # plot: default rate per year
 
@@ -132,7 +133,7 @@ def variable_vs_dr(variable, x_data, y_data):
 
 # plot: calibration table and plot
 
-def my_calibration(y_true, pd_pred, dataset_name="", verbose=True):
+def my_calibration(y_true, pd_pred, dataset_name="", show_cal_table=True, plot_title="Calibration Plot"):
 
     # 1. risk table
 
@@ -179,9 +180,10 @@ def my_calibration(y_true, pd_pred, dataset_name="", verbose=True):
     # Share of portfolio (BY NUMBER OF LOANS)
     table["Share_of_Portfolio"] = table["Count"] / table["Count"].sum()
 
-    # print table
+    # show table
     table = table.reset_index()
-    display(table.style.hide(axis="index"))
+    if (show_cal_table is True):
+        display_table(table)
 
     # save table:
     # table.to_csv("calibration_table.csv", index=False)
@@ -212,7 +214,7 @@ def my_calibration(y_true, pd_pred, dataset_name="", verbose=True):
 
     ax.set_xlabel("PD Bin")
     ax.set_ylabel("PD,DR")
-    ax.set_title("Calibration Plot")
+    ax.set_title(plot_title)
     ax.legend()
     # -> set ticks to bin edges
     ax.set_xticks(bins)
@@ -224,8 +226,14 @@ def my_calibration(y_true, pd_pred, dataset_name="", verbose=True):
     ax.set_xticklabels(bins, rotation=45)
     
     plt.tight_layout()
+    
+    # show plot now!
+    display(fig)
+    plt.close(fig)
 
-    return fig
+    print("-" * 40)
+
+    return
 
 # plot: default capture curve
 
