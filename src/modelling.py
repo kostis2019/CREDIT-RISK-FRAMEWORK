@@ -19,3 +19,17 @@ def apply_pipe(df, pipeline, sensitivity_lgd=False):
         df["EL_90"] = df["PD"] * df["Amount"] * 0.90
 
     return df
+
+# function: estimate LGD
+
+def estimate_lgd(df, method='constant'):
+
+    df = df.copy()
+
+    if method is 'constant':
+        df["LGD"]    = 0.15
+
+    if method is 'historical_avg':
+        df["LGD"]    = 0.15
+
+    return df
