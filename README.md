@@ -8,12 +8,9 @@ The framework has been designed with reusability in mind. Instead of isolated no
 
 The project is inspired by real-world credit risk modelling workflows used in financial institutions and aims to bridge the gap between exploratory data science notebooks and a reusable production-style machine learning framework.
 
-<table align="center" border="0" cellspacing="0" cellpadding="0">
-  <tr>
-    <td><img src="figures/heatmap.png" height="200"></td>
-    <td><img src="figures/windows.png" height="200"></td>
-  </tr>
-</table>
+<p align="center">
+  <img src="figures/framework_summary.png" width="600">
+</p>
 
 #### The framework answers questions such as:
 
