@@ -237,7 +237,7 @@ def my_calibration(y_true, pd_pred, dataset_name="", show_cal_table=True, plot_t
 
 # plot: default capture curve
 
-def default_capture_curve(y_true, pd_pred):
+def default_capture_curve_v0(y_true, pd_pred):
 
     # Create DataFrame
     df = pd.DataFrame({
@@ -280,6 +280,67 @@ def default_capture_curve(y_true, pd_pred):
     # print captured defaults
     # for i in range(df.shape[0]):
     #    print(f"cum_population={df['cum_population'].iloc[i]:5.5f}", f"cum_default_rate={df['cum_default_rate'].iloc[i]:5.5f}")
+
+def default_capture_curve(y_true, models):
+
+    results = {}
+
+    for name, pd_pred in models.items():
+
+        # Create DataFrame
+        df = pd.DataFrame({
+            "y_true": y_true,
+            "y_pred": pd_pred
+        })
+
+        # Sort by predicted PD (highest risk first)
+        df = df.sort_values(by="y_pred", ascending=False).reset_index(drop=True)
+
+        # Cumulative population %
+        df["cum_population"] = np.arange(1, len(df)+1) / len(df)
+
+        # Cumulative defaults captured
+        df["cum_defaults"] = df["y_true"].cumsum()
+
+        # Total defaults
+        total_defaults = df["y_true"].sum()
+
+        # Avoid division by zero
+        df["cum_default_rate"] = df["cum_defaults"] / total_defaults if total_defaults > 0 else 0
+
+        # save
+        results[name] = {
+            "cum_population":   df["cum_population"],
+            "cum_default_rate": df["cum_default_rate"],
+        }
+
+    # 📊 Plot
+
+    plt.figure(figsize=(5,4))
+
+    colors = [
+    "limegreen",
+    "mediumseagreen",    
+    "forestgreen",
+    "seagreen",
+    "yellowgreen",
+    "olivedrab",
+    "darkolivegreen",
+    ]
+
+    for (name, cums), color in zip(results.items(), colors):
+        plt.plot(cums["cum_population"], cums["cum_default_rate"], label=name, linewidth=2, color=color)
+
+    # Random baseline (diagonal)
+    plt.plot([0, 1], [0, 1], linestyle="--", label="Random", color="lightskyblue")
+
+    plt.xlabel("Cumulative % of Population")
+    plt.ylabel("Cumulative % of Defaults Captured")
+    plt.title("Default Capture Curve")
+    plt.legend()
+    plt.grid(True)
+
+    plt.show()
 
 # plot: EL concentration / PDbins
 
@@ -577,3 +638,32 @@ def my_calibration_comparison(y_true, pd_pred_raw, pd_pred_1, pd_pred_2, pd_pred
     ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
 
     plt.tight_layout()
+
+# plot: compare LGD distributions
+
+def compare_lgd_distributions(df):
+
+    bins = np.arange(0, 1.05, 0.05)   # 0%, 5%, ..., 100%
+
+    # use defaulted cases
+    df = df.loc[df["default12"] == 1]
+
+    est_counts, edges = np.histogram(df["LGD"], bins=bins)
+    rea_counts, _     = np.histogram(df["LossGivenDefault"], bins=bins)
+
+    centers = (edges[:-1] + edges[1:]) / 2
+
+    plt.figure(figsize=(5,3))
+
+    plt.plot(centers, est_counts, marker="o", linewidth=2, color='red',   label="LGD: estimated")
+    plt.plot(centers, rea_counts, marker="s", linewidth=2, color='black', label="LGD: realised")
+
+    plt.xlabel("LGD")
+    plt.ylabel("Count")
+    plt.title("compare LGD distributions")
+    plt.xticks(np.arange(0, 1.1, 0.1))
+    plt.grid(alpha=0.3)
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
