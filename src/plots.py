@@ -673,9 +673,9 @@ def compare_lgd_distributions(df):
     # bar width (bins are 0.05 wide)
     width = 0.02  
     # estimated
-    ax1.bar(centers + width/2, est_counts, width=width, color='red'  , label="estimated")
+    ax1.bar(centers + width/2, est_counts, width=width, color='red'  , label="Estimated")
     # realised
-    ax1.bar(centers - width/2, rea_counts, width=width, color='black', label="realised")
+    ax1.bar(centers - width/2, rea_counts, width=width, color='black', label="Realised")
     # realised LGD=0 (recovered)
     ax1.annotate("Recovered", xy=(centers[0], rea_counts[0]), xytext=(0.12, 0.62), arrowprops=dict(arrowstyle="->"), fontsize=9)
     
@@ -698,19 +698,25 @@ def compare_lgd_distributions(df):
     df.groupby("amount_bin", observed=False)
       .agg(
           est=("LGD", "mean"),
-          rea=("LossGivenDefault", "mean")
+          rea=("LossGivenDefault", "mean"),
+          counts=("Amount", "count"),
       )
       .reset_index()
     )
 
     # estimated
-    ax2.plot(summary["amount_bin"], summary["est"], color="red"  , marker="o", linewidth=2, label="estimated")
+    ax2.plot(summary["amount_bin"], summary["est"], color="red"  , marker="o", linewidth=2, label="Estimated")
     # realised
-    ax2.plot(summary["amount_bin"], summary["rea"], color="black", marker="s", linewidth=2, label="realised")
+    ax2.plot(summary["amount_bin"], summary["rea"], color="black", marker="s", linewidth=2, label="Realised")
+    # obs counts
+    for i, n in enumerate(summary["counts"]):
+        if n:
+            ax2.text(i, 0.05, f"n={n}", ha="center", va="bottom", fontsize=7, color="black")
 
     ax2.set_xlabel("Exposure Band")
     ax2.set_ylabel("Average LGD")
     ax2.set_title("Average LGD by Exposure")
+    ax2.set_ylim([0,1])
     ax2.grid(alpha=0.3)
     ax2.legend()
 
