@@ -643,27 +643,77 @@ def my_calibration_comparison(y_true, pd_pred_raw, pd_pred_1, pd_pred_2, pd_pred
 
 def compare_lgd_distributions(df):
 
-    bins = np.arange(0, 1.05, 0.05)   # 0%, 5%, ..., 100%
-
     # use defaulted cases
     df = df.loc[df["default12"] == 1]
 
-    est_counts, edges = np.histogram(df["LGD"], bins=bins)
-    rea_counts, _     = np.histogram(df["LossGivenDefault"], bins=bins)
+    fig, axes = plt.subplots(
+        1, 2,
+        figsize=(10, 3),
+        constrained_layout=True
+    )
 
+    ax1 = axes[0]
+    ax2 = axes[1]
+
+    ### LEFT PLOT
+
+    # lgd bins
+    bins = np.arange(0, 1.05, 0.05)   # 0%, 5%, ..., 100%
+
+    # estimated
+    est_counts, edges = np.histogram(df["LGD"], bins=bins)
+    est_counts = est_counts / est_counts.sum()
+    # realised
+    rea_counts, _     = np.histogram(df["LossGivenDefault"], bins=bins)
+    rea_counts = rea_counts / rea_counts.sum()
+
+    # bin centers
     centers = (edges[:-1] + edges[1:]) / 2
 
-    plt.figure(figsize=(5,3))
+    # bar width (bins are 0.05 wide)
+    width = 0.02  
+    # estimated
+    ax1.bar(centers + width/2, est_counts, width=width, color='red'  , label="estimated")
+    # realised
+    ax1.bar(centers - width/2, rea_counts, width=width, color='black', label="realised")
+    # realised LGD=0 (recovered)
+    ax1.annotate("Recovered", xy=(centers[0], rea_counts[0]), xytext=(0.12, 0.62), arrowprops=dict(arrowstyle="->"), fontsize=9)
+    
+    ax1.set_xlabel("LGD")
+    ax1.set_ylabel("Share of Defaulted Loans")
+    ax1.set_title("LGD Distribution")
+    ax1.set_xticks(np.arange(0, 1.1, 0.1))
+    ax1.grid(alpha=0.3)
+    ax1.legend()
 
-    plt.plot(centers, est_counts, marker="o", linewidth=2, color='red',   label="LGD: estimated")
-    plt.plot(centers, rea_counts, marker="s", linewidth=2, color='black', label="LGD: realised")
+    ### RIGHT PLOT
 
-    plt.xlabel("LGD")
-    plt.ylabel("Count")
-    plt.title("compare LGD distributions")
-    plt.xticks(np.arange(0, 1.1, 0.1))
-    plt.grid(alpha=0.3)
-    plt.legend()
+    # exposure bands
+    bands       = [0, 1000, 2500, 5000, 7500, 10000, 20000, np.inf]
+    band_labels = ["0–1k", "1–2.5k", "2.5–5k", "5–7.5k", "7.5–10k", "10–20k", ">20k"]
 
-    plt.tight_layout()
+    df["amount_bin"] = pd.cut(df["Amount"], bins=bands, labels=band_labels, include_lowest=True)
+
+    summary = (
+    df.groupby("amount_bin", observed=False)
+      .agg(
+          est=("LGD", "mean"),
+          rea=("LossGivenDefault", "mean")
+      )
+      .reset_index()
+    )
+
+    # estimated
+    ax2.plot(summary["amount_bin"], summary["est"], color="red"  , marker="o", linewidth=2, label="estimated")
+    # realised
+    ax2.plot(summary["amount_bin"], summary["rea"], color="black", marker="s", linewidth=2, label="realised")
+
+    ax2.set_xlabel("Exposure Band")
+    ax2.set_ylabel("Average LGD")
+    ax2.set_title("Average LGD by Exposure")
+    ax2.grid(alpha=0.3)
+    ax2.legend()
+
+    ### FINALLY
+
     plt.show()
