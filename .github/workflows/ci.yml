@@ -21,8 +21,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements_full.txt
 
-    - name: Import check
+    - name: Import libraries check
       run: |
         python -c "import pandas"
         python -c "import sklearn"
         python -c "import numpy"
+
+    - name: Import src check
+      run: |
+        python -c "from src.preprocessing import my_input_load, my_time_split, ReplaceMinusOne"
