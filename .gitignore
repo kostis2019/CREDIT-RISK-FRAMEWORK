@@ -25,6 +25,3 @@ src/__pycache__/
 .env
 .env.*
 *.env
-
-# github file
-.github
