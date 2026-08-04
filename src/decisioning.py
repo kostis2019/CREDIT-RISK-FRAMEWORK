@@ -344,6 +344,40 @@ def my_impact(y_true, pd_pred, pd_threshold=0.20):
     table["default_contribution"] = table["share_before"] * table["default_rate_before"]
     display_table(table)
 
+# function: aggregate EL on PD bins
+
+def aggregate_el_on_pd(df_with_el, el_column, bins):
+    
+    total_EL = df_with_el[el_column].sum()
+
+    print("-" * 50)
+    print('OVERALL STATS: ')
+    print(f"EL sum = {total_EL:,.0f}")
+    print("-" * 50)
+
+    # evaluation data and bin
+    df_eval = df_with_el[["PD", el_column]].copy()
+    df_eval["prob_bin"] = pd.cut(df_eval["PD"], bins=bins)
+
+    # aggregation
+    table_EL = (
+        df_eval.groupby("prob_bin", observed=False)
+        .agg(
+            Count  = ("PD"     , "count"),
+            Avg_PD = ("PD"     , "mean"),
+            Sum_EL = (el_column, "sum")
+        )
+    )
+
+    # EL share
+    table_EL["Share_EL"] = table_EL["Sum_EL"] / total_EL
+
+    # display EL table
+    display_table_EL = table_EL.T
+    display_el(display_table_EL)
+
+    return table_EL
+
 # function: display EL table
 
 def display_el(table):
