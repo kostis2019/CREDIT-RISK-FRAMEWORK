@@ -25,3 +25,6 @@ src/__pycache__/
 .env
 .env.*
 *.env
+
+# ignore notebook
+notebooks/05a_*

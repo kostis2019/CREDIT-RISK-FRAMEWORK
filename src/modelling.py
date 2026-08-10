@@ -14,11 +14,11 @@ def apply_pipe(df, pipeline, calculate_el=False, sensitivity_lgd=False):
     df = df.copy()
     df["PD"]    = pipeline.predict_proba(df)[:,1]
 
-    if calculate_el is True:
+    if calculate_el:
         # calculate expected loss using realised LGD 
         df["EL"]    = df["PD"] * df["Amount"] * df["LossGivenDefault"]
 
-        if sensitivity_lgd is True:
+        if sensitivity_lgd:
             # calculate expected loss using LGD 10%, 15%, 25%, 90% 
             df["EL_10"] = df["PD"] * df["Amount"] * 0.10
             df["EL_15"] = df["PD"] * df["Amount"] * 0.15
@@ -27,19 +27,26 @@ def apply_pipe(df, pipeline, calculate_el=False, sensitivity_lgd=False):
 
     return df
 
-# function: estimate LGD
+# function: estimate EL 
 
-def estimate_lgd(df, yr_start, yr_end, method, one_value=0.15):
+def estimate_el(df):
 
     df = df.copy()
 
-    lgd_dataset = my_input_load(yr_start, yr_end)
-    lgd_dataset, dr_summary = create_target_def12(lgd_dataset)
-    lgd_dataset = lgd_dataset.loc[lgd_dataset["default12"] == 1]
+    df["EL"]    = df["PD"] * df["Amount"] * df["LGD"]
+
+    return df
+
+# function: estimate LGD (replaced by fit_lgd, transform_lgd)
+
+def estimate_lgd_v0(df, lgd_dataset, method, one_value=0.15, one_variable=None, verbose=False):
+
+    df = df.copy()
 
     ###### ESTIMATE ######
 
     print('LGD estimation method: ', method)
+    print('Feature: ', one_variable)
 
     if method == 'one_value':
 
@@ -48,29 +55,53 @@ def estimate_lgd(df, yr_start, yr_end, method, one_value=0.15):
     if method == 'historical_avg':
 
         value    = lgd_dataset['LossGivenDefault'].mean()
-
-    if method == 'exposure_bands':
         
-        bands       = [0, 1000, 2500, 5000, 7500, 10000, 20000, np.inf]
-        band_labels = ["0–1k", "1–2.5k", "2.5–5k", "5–7.5k", "7.5–10k", "10–20k", ">20k"]
+    if method == "univariate":
 
+        # EVALUATION DF
         df_eval = pd.DataFrame({
-        "amount": lgd_dataset['Amount'], 
-        "lgd"   : lgd_dataset['LossGivenDefault'] 
+        "feature": lgd_dataset[one_variable],
+        "lgd"    : lgd_dataset["LossGivenDefault"],
         })
 
-        df_eval["amount_bin"] = pd.cut(df_eval["amount"], bins=bands, labels=band_labels, include_lowest=True)
-        
-        lgd_table = (
-        df_eval.groupby("amount_bin", observed=False)
-        .agg(
-            counts=("amount", "count"),
-            amount=("amount", "sum"),
-            lgd   =("lgd", "mean"),
-        ))
-        display(lgd_table)
+        # Categorical OR Numerical?
+        if df_eval["feature"].nunique() > 20:
 
+            numerical = True
+
+        else:
+
+            numerical = False
+
+        # Numerical variable → bin
+        if numerical:
+
+            bins = pd.qcut(df_eval["feature"], q=10, duplicates="drop", retbins=True)[1]
+            df_eval["group"] = pd.cut(df_eval["feature"], bins=bins, precision=2, include_lowest=True)
+
+        # Categorical variable
+        else:
+
+            df_eval["group"] = df_eval["feature"]
+
+        # AVERAGE LGD AND RECOVERY RATE
+        lgd_table = (
+        df_eval
+        .groupby("group", observed=False)
+        .agg(
+        count=("lgd", "count"),
+        lgd=("lgd", "mean"),
+        std=("lgd", "std"),
+        recovery_rate=("lgd", lambda x: (x == 0).mean()),
+        positive_lgd=("lgd", lambda x: x[x > 0].mean())
+        ))
+        if verbose:
+            display(lgd_table)
+
+        # MAP
         lgd_mapping = lgd_table["lgd"].to_dict()
+        if verbose:
+            display(lgd_mapping)
 
     if method == 'linear_regression':
         
@@ -90,16 +121,149 @@ def estimate_lgd(df, yr_start, yr_end, method, one_value=0.15):
 
         df["LGD"]    = value
 
-    if method == "exposure_bands":
+    if method == "univariate":
 
-        df["amount_bin"] = pd.cut(
-            df["Amount"],
-            bins=bands,
-            labels=band_labels,
-            include_lowest=True
+        if numerical:
+
+            df["group"] = pd.cut(df[one_variable], bins=bins, include_lowest=True)
+            df["LGD"] = df["group"].map(lgd_mapping)
+
+        else:
+
+            df["LGD"] = df[one_variable].map(lgd_mapping)
+
+        # unseen categories
+        df["LGD"] = df["LGD"].fillna(lgd_table["lgd"].mean())
+
+    return df
+
+# function: fit LGD
+
+def fit_lgd(lgd_dataset, method, one_value=0.15, one_variable=None, verbose=False):
+
+    print("LGD estimation method:", method)
+    print("Feature:", one_variable)
+
+    lgd_model = {
+        "method": method,
+        "variable": one_variable,
+    }
+
+    if method == "one_value":
+
+        lgd_model["value"] = one_value
+
+    if method == "historical_avg":
+
+        lgd_model["value"] = lgd_dataset["LossGivenDefault"].mean()
+
+    if method == "univariate":
+
+        # EVALUATION DF
+        df_eval = pd.DataFrame({
+            "feature": lgd_dataset[one_variable],
+            "lgd": lgd_dataset["LossGivenDefault"],
+        })
+
+        # Categorical OR Numerical?
+        numerical = df_eval["feature"].nunique() > 20
+
+        lgd_model["numerical"] = numerical
+
+        if numerical:
+
+            bins = pd.qcut(
+                df_eval["feature"],
+                q=10,
+                duplicates="drop",
+                retbins=True
+            )[1]
+
+            df_eval["group"] = pd.cut(
+                df_eval["feature"],
+                bins=bins,
+                precision=2,
+                include_lowest=True
+            )
+
+            lgd_model["bins"] = bins
+
+        else:
+
+            df_eval["group"] = df_eval["feature"]
+
+        lgd_table = (
+            df_eval
+            .groupby("group", observed=False)
+            .agg(
+                count=("lgd", "count"),
+                lgd=("lgd", "mean"),
+                std=("lgd", "std"),
+                recovery_rate=("lgd", lambda x: (x == 0).mean()),
+                positive_lgd=("lgd", lambda x: x[x > 0].mean()),
+            )
         )
 
-        df["LGD"] = df["amount_bin"].map(lgd_mapping)
-        df.drop(columns="amount_bin", inplace=True)
+        if verbose:
+            display(lgd_table)
+
+        lgd_model["mapping"] = lgd_table["lgd"].to_dict()
+        lgd_model["fallback"] = lgd_table["lgd"].mean()
+
+    if method == "linear_regression":
+
+        print("in progress")
+
+    if method == "gradient_boosting_regression":
+
+        print("in progress")
+
+    return lgd_model
+
+# function: transform LGD
+
+def transform_lgd(df, lgd_model):
+
+    df = df.copy()
+
+    method = lgd_model["method"]
+
+    if method == "one_value":
+
+        df["LGD"] = lgd_model["value"]
+
+    if method == "historical_avg":
+
+        df["LGD"] = lgd_model["value"]
+
+    if method == "univariate":
+
+        if lgd_model["numerical"]:
+
+            df["group"] = pd.cut(
+                df[lgd_model["variable"]],
+                bins=lgd_model["bins"],
+                include_lowest=True
+            )
+
+            df["LGD"] = df["group"].map(lgd_model["mapping"])
+
+        else:
+
+            df["LGD"] = df[lgd_model["variable"]].map(
+                lgd_model["mapping"]
+            )
+
+        df["LGD"] = df["LGD"].fillna(
+            lgd_model["fallback"]
+        )
+
+    if method == "linear_regression":
+
+        print("in progress")
+
+    if method == "gradient_boosting_regression":
+
+        print("in progress")
 
     return df

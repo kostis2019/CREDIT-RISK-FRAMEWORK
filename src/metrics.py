@@ -3,7 +3,10 @@ import numpy as np
 from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
-    brier_score_loss
+    brier_score_loss,
+    mean_absolute_error,
+    root_mean_squared_error,
+    r2_score,
 )
 
 # function: KS statistic
@@ -141,3 +144,53 @@ def my_threshold_metrics(y_true, pd_pred, threshold, exposure, el, dataset_name=
             print(f"{'Default Rate':<22}{accept_all_dr:>18.2%}{accept_thr_dr:>18.2%}")
 
         return
+
+# function: my regression metrics
+
+def my_regression_metrics(y_obs, y_pred, dataset_name="", verbose=True):
+    
+    # -------------------------
+    # MAE (mean absolute error)
+    # -------------------------
+    mae = mean_absolute_error(y_obs, y_pred)
+
+    # -------------------------
+    # RMSE (root mean squared error)
+    # -------------------------
+    rmse = root_mean_squared_error(y_obs, y_pred)
+
+    # -------------------------
+    # CORRELATION (Pearson)
+    # -------------------------
+    corr = float(np.corrcoef(y_obs, y_pred)[0,1])
+
+    # -------------------------
+    # REGRESSION FIT
+    # -------------------------    
+    r2   = r2_score(y_obs, y_pred)
+
+    # -------------------------
+    # dictionary
+    # -------------------------
+    metrics = {
+        "Dataset"     : dataset_name,
+        "MAE"         : mae,
+        "RMSE"        : rmse,
+        "CORR"        : corr,
+        "R2"          : r2,
+    }
+
+    # -------------------------
+    # optional print
+    # -------------------------
+    if verbose:
+        print("-" * 40)
+        print(dataset_name)
+        print("-" * 40)
+        print(f"MAE         : {mae:.3f}")
+        print(f"RMSE        : {rmse:.3f}")
+        print(f"CORR        : {corr:.3f}")
+        print(f"R2          : {r2:.3f}")
+        print("-" * 40)
+
+    return metrics

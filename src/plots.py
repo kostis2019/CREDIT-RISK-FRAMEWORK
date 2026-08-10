@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 from IPython.display import display
+from src.preprocessing import my_input_load
 from src.utils import display_table
 
 # plot: default rate per year
@@ -677,7 +678,9 @@ def compare_lgd_distributions(df):
     # realised
     ax1.bar(centers - width/2, rea_counts, width=width, color='black', label="Realised")
     # realised LGD=0 (recovered)
-    ax1.annotate("Recovered", xy=(centers[0], rea_counts[0]), xytext=(0.12, 0.62), arrowprops=dict(arrowstyle="->"), fontsize=9)
+    ax1.annotate("Full Recovery", xy=(centers[0], rea_counts[0]), xytext=(0.08, 0.52), arrowprops=dict(arrowstyle="->", color="black"), fontsize=9, color='black')
+    # estimated LGD=0 (recovered)
+    ax1.annotate("Full Recovery", xy=(centers[0], est_counts[0]), xytext=(0.08, 0.46), arrowprops=dict(arrowstyle="->", color="red"), fontsize=9, color='red')
     
     ax1.set_xlabel("LGD")
     ax1.set_ylabel("Share of Defaulted Loans")
@@ -715,7 +718,7 @@ def compare_lgd_distributions(df):
 
     ax2.set_xlabel("Exposure Band")
     ax2.set_ylabel("Average LGD")
-    ax2.set_title("Average LGD by Exposure")
+    ax2.set_title("Mean LGD Across Exposure Bands")
     ax2.set_ylim([0,1])
     ax2.grid(alpha=0.3)
     ax2.legend()
@@ -723,3 +726,58 @@ def compare_lgd_distributions(df):
     ### FINALLY
 
     plt.show()
+
+# variable vs LGD
+
+def variable_vs_lgd(df, variable):
+
+    # only defaults
+    df = df.loc[df["default12"] == 1]
+
+    # LGD mean, LGD=0, LGD>0
+    summary = (
+        df.groupby(variable, observed=False)
+        .agg(
+            count    =("LossGivenDefault", "count"),
+            LGD_mean =("LossGivenDefault", "mean"),
+            LGD_zero =("LossGivenDefault", lambda x: (x == 0).sum()),
+            LGD_posi =("LossGivenDefault", lambda x: (x > 0).sum()),
+        )
+        .reset_index()
+    )
+    summary["Recovery(%)"] = 100 * summary["LGD_zero"]/summary["count"]
+    summary = summary.rename(columns={"LGD_mean": "LGD(mean)", "LGD_zero": "LGD=0", "LGD_posi": "LGD>0"})
+
+    display(summary.style.format({
+        "LGD(mean)": "{:.3f}",
+        "Recovery(%)": "{:.3f}"
+    }))
+
+# variable min,mean,max across years
+
+def explore_variable(variable, yr_start, yr_end, breaks=None):
+
+    tmp = my_input_load(yr_start, yr_end)
+    summary = tmp.groupby("LoanYear")[variable].describe()[["min", "mean", "max"]]
+
+    plt.figure(figsize=(9, 2))
+
+    plt.fill_between(
+        summary.index,
+        summary["min"],
+        summary["max"],
+        color='gray',
+        alpha=0.2,
+        label="Min–Max range"
+    )
+
+    plt.plot(summary.index, summary["mean"], marker="o", linewidth=2, label="Mean", color='black')
+
+    for x in breaks:
+        plt.axvline(x, color="gray", linestyle="--", alpha=0.7)
+
+    plt.ylabel(variable)
+    plt.xlabel("Loan Year")
+    plt.grid(alpha=0.3)
+    plt.ylim([0,1])
+    plt.legend()
