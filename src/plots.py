@@ -781,3 +781,140 @@ def explore_variable(variable, yr_start, yr_end, breaks=None):
     plt.grid(alpha=0.3)
     plt.ylim([0,1])
     plt.legend()
+
+# plot: EL,CAP heatmap on PD,LGD
+
+def my_heatmap(df, variable, column_lgd):
+
+    print('selected variable: ', variable)
+
+    # settings for plotting
+    variables = {
+    "EL": {
+        "title": 'Expected Loss Concentration',
+        "cmap" : "Blues",
+        "label": "Share of Portfolio EL",
+    },
+    "CAP": {
+        "title": 'Capital Concentration',
+        "cmap" : "Purples",
+        "label": "Share of Portfolio Capital",
+    },
+    }
+
+    ######## create 2D table for heatmap
+
+    # quantile buckets for PD
+    df["PD_bin"]  = pd.qcut(df["PD"], 5)
+
+    # fixed buckets for LGD
+    lgd_bins = [0, 0.1, 0.3, 0.5, 0.7, 1.0]
+    df["LGD_bin"] = pd.cut(df[column_lgd], bins=lgd_bins)
+
+    # VARIABLE total
+    total_variable = df[variable].sum()
+
+    # EL share
+    df["Share"] = df[variable] / total_variable
+
+    # look
+    #print(df.head())
+
+    # 2D table
+    heatmap_table = pd.pivot_table(
+        df,
+        values="Share",
+        index="LGD_bin",
+        columns="PD_bin",
+        aggfunc="sum"
+    )
+
+    # choose PD labels 1/3?
+    pd_labels_1 = [
+        f"{max(interval.left,0)*100:.0f}–{interval.right*100:.0f}%"
+        for interval in heatmap_table.columns
+    ]
+    heatmap_table.columns = pd_labels_1
+    # look
+    #print(heatmap_table)
+
+    # choose PD labels 2/3?
+    pd_labels_2 = [
+        "low","medium-low","medium","medium-high","high"
+    ]
+    heatmap_table.columns = pd_labels_2
+    #print(heatmap_table)
+    
+    # choose PD labels 3/3?
+    pd_labels_3 = [
+        "≤10%", "10–12%", "12–15%", "15–20%", "≥20%"
+    ]
+    heatmap_table.columns = pd_labels_3
+
+    # fix LGD labels
+    lg_labels = [
+        f"{max(interval.left,0)*100:.0f}–{interval.right*100:.0f}%"
+        for interval in heatmap_table.index
+    ]
+    heatmap_table.index = lg_labels
+
+    print(heatmap_table)
+
+    ############ plot heatmap
+
+    plt.figure(figsize=(5,4))
+
+    im = plt.imshow(
+        heatmap_table,
+        aspect="auto",
+        cmap=variables[variable]["cmap"],
+        vmin=0.01,
+        vmax=heatmap_table.values.max()
+    )
+
+    cbar = plt.colorbar(
+        im,
+        label=variables[variable]["label"]
+    )
+
+    cbar.ax.yaxis.set_major_formatter(
+        mtick.PercentFormatter(1)
+    )
+
+    plt.xticks(
+        range(len(heatmap_table.columns)),
+        heatmap_table.columns.astype(str),
+        rotation=45
+    )
+
+    plt.yticks(
+        range(len(heatmap_table.index)),
+        heatmap_table.index.astype(str),
+        rotation=45
+    )
+
+    # -------- cell annotations ------------
+    for i in range(heatmap_table.shape[0]):
+        for j in range(heatmap_table.shape[1]):
+
+            value = heatmap_table.iloc[i,j]
+
+            if pd.notna(value):
+            
+                color = "white" if value > 0.12 else "black"
+                plt.text(
+                    j,
+                    i,
+                    f"{value:.1%}",
+                    ha="center",
+                    va="center",
+                    color=color,
+                    fontsize=9
+                )
+
+    plt.xlabel("PD Bucket")
+    plt.ylabel("LGD Bucket")
+    plt.title(variables[variable]["title"])
+
+    plt.tight_layout()
+    plt.show()

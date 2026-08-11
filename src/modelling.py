@@ -267,3 +267,29 @@ def transform_lgd(df, lgd_model):
         print("in progress")
 
     return df
+
+# function: estimate capital
+
+def estimate_capital(df, method, column_lgd):
+
+    df = df.copy()
+
+    # method "simple" proxy: capital = 2 * expected loss
+
+    if method == "simple":
+
+        df["CAP"]    =  2 * df["PD"] * df["Amount"] * df[column_lgd]
+
+    # method "monte-carlo" calculation: Monte-Carlo method (not implemented yet)
+
+    if method == "monte-carlo":
+        
+        print('in progress')  
+ 
+    # method "stress" proxy: capital = 5 * expected loss
+      
+    if method == "stress":
+
+        df["CAP"]    = 5 * df["PD"] * df["Amount"] * df[column_lgd]
+
+    return df
