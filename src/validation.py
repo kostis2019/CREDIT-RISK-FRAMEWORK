@@ -14,3 +14,29 @@ def missing_summary(df):
     summary = summary.sort_values(by="missing_percent", ascending=False)
     
     return summary
+
+# function: validate model output
+
+def validate_predictions(df):
+
+    print("-" * 40)
+    print("MODEL OUTPUT VALIDATION")
+    print("-" * 40)
+
+    summary = pd.DataFrame({
+        "PD": [
+            df["PD"].min(),
+            df["PD"].mean(),
+            df["PD"].max(),
+            df["PD"].isna().sum()
+        ],
+        "LGD": [
+            df["LGD"].min(),
+            df["LGD"].mean(),
+            df["LGD"].max(),
+            df["LGD"].isna().sum()
+        ]
+    },
+    index=["Min", "Mean", "Max", "NaNs"])
+
+    display(summary.round(3))
