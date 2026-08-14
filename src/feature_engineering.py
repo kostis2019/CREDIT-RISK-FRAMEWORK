@@ -52,7 +52,10 @@ def create_target_def12(full_dataset):
 
 class SpecialMappings(BaseEstimator, TransformerMixin):
 
-    def __init__(self):       
+    def __init__(self, verbose=False):
+
+        self.verbose = verbose
+
     # define all mappings here
     
         self.mappings = {
@@ -96,15 +99,34 @@ class SpecialMappings(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         return self
     
+    # def transform(self, X):
+    #     X = X.copy()
+
+    #     for col, mapping in self.mappings.items():
+    #         if col in X.columns:
+    #             X[col] = X[col].map(mapping)               
+    #             # 👉 cast to int AFTER mapping
+    #             X[col] = X[col].astype("Int64")
+        
+    #     return X
+
     def transform(self, X):
         X = X.copy()
 
         for col, mapping in self.mappings.items():
             if col in X.columns:
-                X[col] = X[col].map(mapping)               
-                # 👉 cast to int AFTER mapping
+
+                if self.verbose:
+                    print("- Before mapping: ")
+                    print(X[col].value_counts(dropna=False))
+
+                X[col] = X[col].map(mapping)
                 X[col] = X[col].astype("Int64")
-        
+
+                if self.verbose:
+                    print("- After mapping: ")
+                    print(X[col].value_counts(dropna=False))
+
         return X
 
 # select features (selects pre-defined selected features)
