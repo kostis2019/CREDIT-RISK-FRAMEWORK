@@ -678,13 +678,14 @@ def compare_lgd_distributions(df):
     # realised
     ax1.bar(centers - width/2, rea_counts, width=width, color='black', label="Realised")
     # realised LGD=0 (recovered)
-    ax1.annotate("Full Recovery", xy=(centers[0], rea_counts[0]), xytext=(0.08, 0.52), arrowprops=dict(arrowstyle="->", color="black"), fontsize=9, color='black')
+    ax1.annotate("Full Recovery", xy=(centers[0], rea_counts[0]), xytext=(0.05, 0.82), arrowprops=dict(arrowstyle="->", color="black"), fontsize=9, color='black')
     # estimated LGD=0 (recovered)
-    ax1.annotate("Full Recovery", xy=(centers[0], est_counts[0]), xytext=(0.08, 0.46), arrowprops=dict(arrowstyle="->", color="red"), fontsize=9, color='red')
+    ax1.annotate("Full Recovery", xy=(centers[0], est_counts[0]), xytext=(0.05, 0.76), arrowprops=dict(arrowstyle="->", color="red"), fontsize=9, color='red')
     
     ax1.set_xlabel("LGD")
     ax1.set_ylabel("Share of Defaulted Loans")
     ax1.set_title("LGD Distribution")
+    ax1.set_ylim([0,1])
     ax1.set_xticks(np.arange(0, 1.1, 0.1))
     ax1.grid(alpha=0.3)
     ax1.legend()

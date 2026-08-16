@@ -142,7 +142,6 @@ def estimate_lgd_v0(df, lgd_dataset, method, one_value=0.15, one_variable=None, 
 def fit_lgd(lgd_dataset, method, one_value=0.15, one_variable=None, verbose=False):
 
     print("LGD estimation method:", method)
-    print("Feature:", one_variable)
 
     lgd_model = {
         "method": method,
@@ -159,6 +158,8 @@ def fit_lgd(lgd_dataset, method, one_value=0.15, one_variable=None, verbose=Fals
 
     if method == "univariate":
 
+        print("Feature:", one_variable)
+
         # EVALUATION DF
         df_eval = pd.DataFrame({
             "feature": lgd_dataset[one_variable],
@@ -166,7 +167,7 @@ def fit_lgd(lgd_dataset, method, one_value=0.15, one_variable=None, verbose=Fals
         })
 
         # Categorical OR Numerical?
-        numerical = df_eval["feature"].nunique() > 20
+        numerical = lgd_dataset[one_variable].nunique() > 20
 
         lgd_model["numerical"] = numerical
 

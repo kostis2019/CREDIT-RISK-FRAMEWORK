@@ -40,3 +40,56 @@ def validate_predictions(df):
     index=["Min", "Mean", "Max", "NaNs"])
 
     display(summary.round(3))
+
+# function: best model selector
+
+def model_selector(experiment_metrics, metric="CORR"):
+    """
+    Select the best model based on validation performance.
+
+    Parameters
+    ----------
+    experiment_metrics : pd.DataFrame
+        Output table containing TRAIN and TEST metrics.
+    metric : str
+        Metric to use (default: CORR).
+
+    Returns
+    -------
+    selection_table : pd.DataFrame
+    best_model : pd.DataFrame
+    """
+
+    # reshape: one row per experiment
+    selection_table = (
+        experiment_metrics
+        .pivot(
+            index=["Experiment", "Method", "Variable"],
+            columns="Dataset",
+            values=metric,
+        )
+        .reset_index()
+        .rename(columns={
+            "TRAIN": f"Train {metric}",
+            "TEST": f"Test {metric}",
+        })
+    )
+
+    # generalization gap
+    selection_table["Generalization Gap"] = (
+        selection_table[f"Train {metric}"] -
+        selection_table[f"Test {metric}"]
+    ).abs()
+
+    # select best model:
+    # highest validation metric, then smallest gap
+    best_model = (
+        selection_table
+        .sort_values(
+            by=[f"Test {metric}", "Generalization Gap"],
+            ascending=[False, True]
+        )
+        .head(1)
+    )
+
+    return selection_table, best_model
