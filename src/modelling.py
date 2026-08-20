@@ -3,10 +3,12 @@ import pandas as pd
 from src.feature_engineering import create_target_def12
 from src.preprocessing import my_input_load
 from src.utils import display_table
+from sklearn.linear_model import LinearRegression
+import xgboost
 
-# function: apply pipeline 
+# function: apply PD pipeline 
 #           - calculate PD
-#           - calculate EL 
+#           - calculate EL       (optional)
 #           - sensitivity on LGD (optional)
 
 def apply_pipe(df, pipeline, calculate_el=False, sensitivity_lgd=False):
@@ -24,6 +26,23 @@ def apply_pipe(df, pipeline, calculate_el=False, sensitivity_lgd=False):
             df["EL_15"] = df["PD"] * df["Amount"] * 0.15
             df["EL_25"] = df["PD"] * df["Amount"] * 0.25
             df["EL_90"] = df["PD"] * df["Amount"] * 0.90
+
+    return df
+
+# function: apply LGD pipeline
+
+def apply_pipe_LGD(df, pipeline):
+
+    df = df.copy()
+
+    # preprocess
+    X = pipeline["preprocessor"].transform(df)
+
+    # estimate LGD
+    X = transform_lgd(X, pipeline["model"])
+
+    # append
+    df["LGD"] = X["LGD"]
 
     return df
 
@@ -213,11 +232,31 @@ def fit_lgd(lgd_dataset, method, one_value=0.15, one_variable=None, verbose=Fals
 
     if method == "linear_regression":
 
-        print("in progress")
+        # model X
+        model_X = lgd_dataset.drop(columns=["LossGivenDefault", "num__default12"])
+        # model y
+        model_y = lgd_dataset["LossGivenDefault"]
+        # model
+        model = LinearRegression()
+        # fit
+        lgd_model = {"method": method, "model": model.fit(model_X, model_y)}
+        # coefficients
+        coef = pd.Series(model.coef_, index=model_X.columns).sort_values(key=abs, ascending=False)
+        print(coef)
 
     if method == "gradient_boosting_regression":
 
-        print("in progress")
+        # model X
+        model_X = lgd_dataset.drop(columns=["LossGivenDefault", "num__default12"])
+        # model y
+        model_y = lgd_dataset["LossGivenDefault"]
+        # model
+        model = xgboost.XGBRegressor()
+        # fit
+        lgd_model = {"method": method, "model": model.fit(model_X, model_y)}
+        # importances
+        impo = pd.Series(model.feature_importances_, index=model_X.columns).sort_values(ascending=False)
+        print(impo)
 
     return lgd_model
 
@@ -261,11 +300,15 @@ def transform_lgd(df, lgd_model):
 
     if method == "linear_regression":
 
-        print("in progress")
+        model_X = df.drop(columns=["LossGivenDefault", "num__default12"], errors="ignore")
+        df["LGD"] = lgd_model["model"].predict(model_X)
+        df["LGD"] = df["LGD"].clip(0, 1)
 
     if method == "gradient_boosting_regression":
 
-        print("in progress")
+        model_X = df.drop(columns=["LossGivenDefault", "num__default12"], errors="ignore")
+        df["LGD"] = lgd_model["model"].predict(model_X)
+        df["LGD"] = df["LGD"].clip(0, 1)
 
     return df
 

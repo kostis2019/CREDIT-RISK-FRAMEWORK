@@ -19,6 +19,12 @@ def missing_summary(df):
 
 def validate_predictions(df):
 
+    required = ["PD", "LGD"]
+    missing = [c for c in required if c not in df.columns]
+
+    if missing:
+        raise ValueError(f"Missing columns: {missing}")
+
     print("-" * 40)
     print("MODEL OUTPUT VALIDATION")
     print("-" * 40)
@@ -74,6 +80,9 @@ def model_selector(experiment_metrics, metric="CORR"):
             "TEST": f"Test {metric}",
         })
     )
+
+    # remove preprocessing prefixes
+    selection_table["Variable"] = (selection_table["Variable"].str.replace("num__", "", regex=False).str.replace("cat__", "", regex=False))
 
     # generalization gap
     selection_table["Generalization Gap"] = (

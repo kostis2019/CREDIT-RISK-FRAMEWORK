@@ -640,12 +640,56 @@ def my_calibration_comparison(y_true, pd_pred_raw, pd_pred_1, pd_pred_2, pd_pred
 
     plt.tight_layout()
 
+# plot: observed vs predicted LGDs
+
+def pred_vs_obs_lgd(df_trai, df_test):
+    """
+    Scatter plot of predicted vs observed LGD for train and test datasets.
+    """
+
+    import matplotlib.pyplot as plt
+
+    plt.figure(figsize=(4, 4))
+
+    # Train
+    plt.scatter(
+        df_trai["LossGivenDefault"],
+        df_trai["LGD"],
+        alpha=0.2,
+        s=10,
+        label="Train"
+    )
+
+    # Test
+    plt.scatter(
+        df_test["LossGivenDefault"],
+        df_test["LGD"],
+        alpha=0.2,
+        s=10,
+        label="Test"
+    )
+
+    # Perfect prediction line
+    plt.plot([0, 1], [0, 1], "k--", lw=2)
+
+    plt.xlabel("Observed LGD")
+    plt.ylabel("Predicted LGD")
+    plt.title("Predicted vs Observed LGD")
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
+    plt.grid(alpha=0.3)
+    plt.legend()
+
+    plt.show()
+
 # plot: compare LGD distributions
 
 def compare_lgd_distributions(df):
 
     # use defaulted cases
-    df = df.loc[df["default12"] == 1]
+    default_col = next((c for c in ["default12", "num__default12"] if c in df.columns), None)
+    if default_col is not None:
+        df = df.loc[df[default_col] == 1]
 
     fig, axes = plt.subplots(
         1, 2,
