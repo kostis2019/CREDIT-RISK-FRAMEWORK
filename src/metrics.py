@@ -194,3 +194,70 @@ def my_regression_metrics(y_obs, y_pred, dataset_name="", verbose=True):
         print("-" * 40)
 
     return metrics
+
+# function: my monte-carlo metrics
+
+def my_monte_carlo_metrics(df, sim_dr, sim_losses, sim_losses_indiv, n_simulations, el_total, verbose=True):
+
+    #    sim_dr           : simulated DR
+    #    sim_losses       : per simulation portfolio loss
+    #    sim_losses_indiv : per simulation individual losses
+
+    # Monte-Carlo: validate
+
+    print(40*'-')
+    print('Monte Carlo validation')
+    print(40*'-')
+    val_summary = {
+        "DR (mean) observed"  : df['default12'].mean(),
+        "PD (mean) predicted" : df['PD'].mean(),
+        "Simulated DR (mean)" : np.mean(sim_dr),
+        "Simulated DR (std)"  : np.std(sim_dr),
+        "Nr simulations"      : n_simulations,
+    }
+    for key, value in val_summary.items():
+        if "Nr" in key:
+            print(f"{key:<20}: {value:>12.0f}")
+        else:
+            print(f"{key:<20}: {value:>12,.4f}")        
+    print(40*'-')
+
+    # Monte-Carlo: summarize simulated losses
+
+    print(40*'-')
+    print("Portfolio Loss summary")
+    print(40*'-')
+    loss_summary = {
+        "EAD"        : df["Amount"].sum(),
+        "Loss (min)" : sim_losses.min(),
+        "Loss (mean)": sim_losses.mean(),
+        "Loss (std)" : sim_losses.std(),
+        "Loss (max)" : sim_losses.max(),
+        "VaR 95%"    : np.percentile(sim_losses, 95),
+        "VaR 99%"    : np.percentile(sim_losses, 99),
+        "VaR 99.9%"  : np.percentile(sim_losses, 99.9),
+    }
+    loss_summary["Economic Capital"] = (loss_summary["VaR 99.9%"] - loss_summary["Loss (mean)"])
+    for key, value in loss_summary.items():
+        print(f"{key:<20}: {value:>12,.0f}")
+    print(40*'-')
+
+    # Monte-Carlo: compare EL with simulated EL
+
+    print(40*'-')
+    print("Expected Loss comparison")
+    print(40*'-')
+    el_summary = {
+        "EL (deterministic)" : el_total,
+        "EL (MC-simulated)"  : sim_losses.mean(),        
+    }
+    el_summary["Difference"] = (el_summary["EL (deterministic)"] - el_summary["EL (MC-simulated)"])
+    el_summary["Difference (rel)"] = el_summary["Difference"]/el_summary["EL (deterministic)"]*100
+    for key, value in el_summary.items():
+        if "(rel)" in key:
+            print(f"{key:<20}: {value:>11.2f}%")
+        else:
+            print(f"{key:<20}: {value:>12,.0f}")
+    print(40*'-')
+
+    return val_summary, loss_summary, el_summary

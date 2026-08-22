@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from src.feature_engineering import create_target_def12
+from src.metrics import my_monte_carlo_metrics
 from src.preprocessing import my_input_load
 from src.plots import plot_loss_distribution
 from src.utils import display_table
@@ -49,11 +50,11 @@ def apply_pipe_LGD(df, pipeline):
 
 # function: estimate EL 
 
-def estimate_el(df):
+def estimate_el(df, column_lgd):
 
     df = df.copy()
 
-    df["EL"]    = df["PD"] * df["Amount"] * df["LGD"]
+    df["EL"]    = df["PD"] * df["Amount"] * df[column_lgd]
 
     return df
 
@@ -315,28 +316,34 @@ def transform_lgd(df, lgd_model):
 
 # function: estimate capital
 
-def estimate_capital(df, method, column_lgd):
+def estimate_capital(df, method, column_lgd, allocate= False):
 
     df = df.copy()
 
     # portfolio total exposure
-    #           total EL (deterministic)
 
-    amt_total = df["Amount"].sum()
-    EL_array  = df["PD"] * df["Amount"] * df[column_lgd]
-    EL_total  = EL_array.sum()
+    print('Portfolio amount: ', df["Amount"].sum())
+
+    # portfolio EL (deterministic)
+
+    df["EL"] = df["PD"] * df["Amount"] * df[column_lgd]
+    print('Portfolio EL    : ', df["EL"].sum())
 
     # method "simple" proxy: capital = 2 * expected loss
 
     if method == "simple":
 
-        df["CAP"]    =  2 * df["PD"] * df["Amount"] * df[column_lgd]
+        if allocate:
+
+            df["CAP"]    =  2 * df["PD"] * df["Amount"] * df[column_lgd]
 
     # method "stress" proxy: capital = 5 * expected loss
       
     if method == "stress":
 
-        df["CAP"]    = 5 * df["PD"] * df["Amount"] * df[column_lgd]
+        if allocate:
+
+            df["CAP"]    = 5 * df["PD"] * df["Amount"] * df[column_lgd]
 
     # method "monte-carlo"
 
@@ -347,8 +354,9 @@ def estimate_capital(df, method, column_lgd):
         rng = np.random.default_rng(seed=42)
         n_simulations = 10000
 
-        sim_dr     = []
-        sim_losses = []
+        sim_dr           = []
+        sim_losses       = []
+        sim_losses_indiv = [] 
 
         # Monte-Carlo: simulate
 
@@ -360,75 +368,92 @@ def estimate_capital(df, method, column_lgd):
 
             # simulate losses
             loss = (sim_defaults * df["Amount"] * df[column_lgd])
+
+            # portfolio loss for simulation i
             loss_total = loss.sum()
             sim_losses.append(loss_total)
 
+            # individual losses for simulation i
+            loss_indiv = loss
+            sim_losses_indiv.append(loss_indiv)
+
+        sim_dr           = np.array(sim_dr)
+        sim_losses       = np.array(sim_losses)
+        sim_losses_indiv = np.array(sim_losses_indiv)
+
+        # check shapes
+        # sim_dr[i]              : portfolio default rate in simulation i
+        # sim_losses[i]          : portfolio loss in simulation i
+        # sim_losses_indiv[i, j] : loss of loan j in simulation i
+
+        print('- shapes:')
+        print(sim_dr.shape)
+        print(sim_losses.shape)
+        print(sim_losses_indiv.shape)
+        print('-')
+
+        # consistency check
+
+        print('- consistency check:')
+        print(np.allclose(sim_losses, sim_losses_indiv.sum(axis=1)))
+        print('-')
+
         # Monte-Carlo: output
 
-        sim_dr_mean = np.mean(sim_dr)      # simulated DR
-        sim_dr_std  = np.std(sim_dr)       # simulated DR
-        sim_losses  = np.array(sim_losses) # simulated losses
+        sim_dr           = sim_dr            # simulated DR
+        sim_losses       = sim_losses        # per simulation: portfolio loss
+        sim_losses_indiv = sim_losses_indiv  # per simulation: individual losses
 
-        # Monte-Carlo: validate
+        # Monte-Carlo: metrics
 
-        print(40*'-')
-        print('Monte Carlo validation')
-        print(40*'-')
-        val_summary = {
-            "DR (mean) observed"  : df['default12'].mean(),
-            "PD (mean) predicted" : df['PD'].mean(),
-            "Simulated DR (mean)" : sim_dr_mean,
-            "Simulated DR (std)"  : sim_dr_std,
-            "Nr simulations"      : n_simulations,
-        }
-        for key, value in val_summary.items():
-            if "Nr" in key:
-                print(f"{key:<20}: {value:>12.0f}")
-            else:
-                print(f"{key:<20}: {value:>12,.4f}")        
-        print(40*'-')
+        val_summary, loss_summary, el_summary = my_monte_carlo_metrics(df, 
+                                                                    sim_dr, 
+                                                                    sim_losses, 
+                                                                    sim_losses_indiv, 
+                                                                    n_simulations, 
+                                                                    el_total=df["EL"].sum(), 
+                                                                    verbose=True)
 
+        # Monte-Carlo: loss distribution
 
-        # Monte-Carlo: summarize simulated losses
+        plot_loss_distribution(sim_losses, df["Amount"].sum())
 
-        print(40*'-')
-        print("Portfolio Loss summary")
-        print(40*'-')
-        loss_summary = {
-            "EAD"        : amt_total,
-            "Loss (min)" : sim_losses.min(),
-            "Loss (mean)": sim_losses.mean(),
-            "Loss (std)" : sim_losses.std(),
-            "Loss (max)" : sim_losses.max(),
-            "VaR 95%"    : np.percentile(sim_losses, 95),
-            "VaR 99%"    : np.percentile(sim_losses, 99),
-            "VaR 99.9%"  : np.percentile(sim_losses, 99.9),
-        }
-        loss_summary["Economic Capital"] = (loss_summary["VaR 99.9%"] - loss_summary["Loss (mean)"])
-        for key, value in loss_summary.items():
-            print(f"{key:<20}: {value:>12,.0f}")
-        print(40*'-')  
+        # Monte-Carlo: allocate 
 
-        # Monte-Carlo: compare EL with simulated EL
+        if allocate:
 
-        print(40*'-')
-        print("Expected Loss comparison")
-        print(40*'-')
-        el_comparison = {
-            "EL (deterministic)" : EL_total,
-            "EL (MC-simulated)"  : sim_losses.mean(),        
-        }
-        el_comparison["Difference"] = (el_comparison["EL (deterministic)"] - el_comparison["EL (MC-simulated)"])
-        el_comparison["Difference (rel)"] = el_comparison["Difference"]/el_comparison["EL (deterministic)"]*100
-        for key, value in el_comparison.items():
-            if "(rel)" in key:
-                print(f"{key:<20}: {value:>11.2f}%")
-            else:
-                print(f"{key:<20}: {value:>12,.0f}")
-        print(40*'-')
+            # define tail
 
-        # plot 
-        plot_loss_distribution(sim_losses, amt_total)
+            tail        = sim_losses >= loss_summary["VaR 99.9%"]
+            tail_losses = sim_losses_indiv[tail]
+
+            print('- shapes:')
+            print(tail_losses.shape)
+            print('-')
+
+            df["CAP"]   = tail_losses.mean(axis=0)
+
+            print('- consistency check:')
+            print(df["CAP"].sum())
+            print(tail_losses.sum(axis=1).mean())
+            print('-')
+
+            # average contribution in the tail (one value per loan)
+
+            tail_contrib = tail_losses.mean(axis=0)
+
+            # allocate portfolio economic capital
+
+            capital_alloc = (tail_contrib / tail_contrib.sum()) * loss_summary["Economic Capital"]
+
+            # assign to each loan
+
+            df["CAP"] = capital_alloc
+
+            print('- consistency check:')
+            print(df["CAP"].sum())
+            print(loss_summary["Economic Capital"])
+            print('-')
 
     # end of estimation
     return df
