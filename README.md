@@ -14,22 +14,25 @@ The project is inspired by real-world credit risk modelling workflows used in fi
 
 #### The framework answers questions such as:
 
-1. How can a robust application-time PD model be developed from historical lending data?
-1. Which preprocessing and feature engineering steps are required before modelling?
-1. How does Logistic Regression compare with Gradient Boosting for this portfolio?
-1. How well calibrated are the predicted probabilities?
-1. Which calibration technique performs best?
-1. How should an optimal PD acceptance threshold be selected?
-1. What is the impact of a threshold on Approval/Default Rates and Expected Loss?
-1. How stable is the model on unseen data?
-1. How can model performance be evaluated using discrimination, calibration, and business metrics?
-1. How can Population Stability Index (PSI) and feature drift be monitored? (in progress)
-1. How can model governance and monitoring dashboards support retraining decisions? (in progress)
+⚫ How can a robust application-time Probability of Default (PD) model be developed from historical lending data?<br>
+⚫ Which preprocessing and feature engineering steps are required before modelling?<br>
+⚫ How do Logistic Regression and Gradient Boosting compare for application-time PD modelling?<br>
+⚫ How well calibrated are the predicted probabilities?<br>
+⚫ Which calibration technique provides the best probability estimates?<br>
+⚫ How can an optimal PD acceptance threshold be selected?<br>
+⚫ What is the impact of different approval thresholds on Approval Rate, Default Rate and Expected Loss?<br>
+⚫ How can application-time Loss Given Default (LGD) be estimated using empirical and modelling approaches?<br>
+⚫ How can portfolio Expected Loss (EL) be quantified and visualized?<br>
+⚫ How can portfolio loss distributions be estimated using Monte Carlo simulation?<br>
+⚫ How can Value-at-Risk (VaR) and Economic Capital be estimated from simulated portfolio losses?<br>
+⚫ How can Monte Carlo estimates be validated against deterministic Expected Loss?<br>
+🟢 How can portfolio Economic Capital be allocated back to individual exposures?<br>
+🟢 How can Population Stability Index (PSI) and feature drift be monitored?<br>
+🟢 How can model governance and monitoring dashboards support retraining decisions?<br>
+🟢 How can application-time LGD modelling be further improved?<br>
+⚪ How can correlated defaults be incorporated into the Monte Carlo simulation?<br>
+⚪ How can macroeconomic scenarios and stress testing be incorporated?<br>
+⚪ How can the framework be executed through configuration files?<br>
+⚪ How can the framework be deployed as an API?<br>
 
-#### Future Development
-
-1. Monte-Carlo Capital calculation (in progress)
-1. Drift Monitoring (in progress)
-1. Governance Dashboard (planned)
-1. API Deployment (planned)
-1. Configuration-driven execution (planned)
+**Status:** ⚫ Implemented | 🟢 In Progress | ⚪ Planned

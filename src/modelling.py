@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from src.feature_engineering import create_target_def12
 from src.preprocessing import my_input_load
+from src.plots import plot_loss_distribution
 from src.utils import display_table
 from sklearn.linear_model import LinearRegression
 import xgboost
@@ -318,22 +319,116 @@ def estimate_capital(df, method, column_lgd):
 
     df = df.copy()
 
+    # portfolio total exposure
+    #           total EL (deterministic)
+
+    amt_total = df["Amount"].sum()
+    EL_array  = df["PD"] * df["Amount"] * df[column_lgd]
+    EL_total  = EL_array.sum()
+
     # method "simple" proxy: capital = 2 * expected loss
 
     if method == "simple":
 
         df["CAP"]    =  2 * df["PD"] * df["Amount"] * df[column_lgd]
 
-    # method "monte-carlo" calculation: Monte-Carlo method (not implemented yet)
-
-    if method == "monte-carlo":
-        
-        print('in progress')  
- 
     # method "stress" proxy: capital = 5 * expected loss
       
     if method == "stress":
 
         df["CAP"]    = 5 * df["PD"] * df["Amount"] * df[column_lgd]
 
+    # method "monte-carlo"
+
+    if method == "monte-carlo":
+        
+        # Monte-Carlo: initialise
+
+        rng = np.random.default_rng(seed=42)
+        n_simulations = 10000
+
+        sim_dr     = []
+        sim_losses = []
+
+        # Monte-Carlo: simulate
+
+        for i in range(n_simulations):
+    
+            # simulate defaults
+            sim_defaults = rng.binomial(n=1, p=df["PD"])
+            sim_dr.append(sim_defaults.mean())
+
+            # simulate losses
+            loss = (sim_defaults * df["Amount"] * df[column_lgd])
+            loss_total = loss.sum()
+            sim_losses.append(loss_total)
+
+        # Monte-Carlo: output
+
+        sim_dr_mean = np.mean(sim_dr)      # simulated DR
+        sim_dr_std  = np.std(sim_dr)       # simulated DR
+        sim_losses  = np.array(sim_losses) # simulated losses
+
+        # Monte-Carlo: validate
+
+        print(40*'-')
+        print('Monte Carlo validation')
+        print(40*'-')
+        val_summary = {
+            "DR (mean) observed"  : df['default12'].mean(),
+            "PD (mean) predicted" : df['PD'].mean(),
+            "Simulated DR (mean)" : sim_dr_mean,
+            "Simulated DR (std)"  : sim_dr_std,
+            "Nr simulations"      : n_simulations,
+        }
+        for key, value in val_summary.items():
+            if "Nr" in key:
+                print(f"{key:<20}: {value:>12.0f}")
+            else:
+                print(f"{key:<20}: {value:>12,.4f}")        
+        print(40*'-')
+
+
+        # Monte-Carlo: summarize simulated losses
+
+        print(40*'-')
+        print("Portfolio Loss summary")
+        print(40*'-')
+        loss_summary = {
+            "EAD"        : amt_total,
+            "Loss (min)" : sim_losses.min(),
+            "Loss (mean)": sim_losses.mean(),
+            "Loss (std)" : sim_losses.std(),
+            "Loss (max)" : sim_losses.max(),
+            "VaR 95%"    : np.percentile(sim_losses, 95),
+            "VaR 99%"    : np.percentile(sim_losses, 99),
+            "VaR 99.9%"  : np.percentile(sim_losses, 99.9),
+        }
+        loss_summary["Economic Capital"] = (loss_summary["VaR 99.9%"] - loss_summary["Loss (mean)"])
+        for key, value in loss_summary.items():
+            print(f"{key:<20}: {value:>12,.0f}")
+        print(40*'-')  
+
+        # Monte-Carlo: compare EL with simulated EL
+
+        print(40*'-')
+        print("Expected Loss comparison")
+        print(40*'-')
+        el_comparison = {
+            "EL (deterministic)" : EL_total,
+            "EL (MC-simulated)"  : sim_losses.mean(),        
+        }
+        el_comparison["Difference"] = (el_comparison["EL (deterministic)"] - el_comparison["EL (MC-simulated)"])
+        el_comparison["Difference (rel)"] = el_comparison["Difference"]/el_comparison["EL (deterministic)"]*100
+        for key, value in el_comparison.items():
+            if "(rel)" in key:
+                print(f"{key:<20}: {value:>11.2f}%")
+            else:
+                print(f"{key:<20}: {value:>12,.0f}")
+        print(40*'-')
+
+        # plot 
+        plot_loss_distribution(sim_losses, amt_total)
+
+    # end of estimation
     return df

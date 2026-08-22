@@ -963,3 +963,102 @@ def my_heatmap(df, variable, column_lgd):
 
     plt.tight_layout()
     plt.show()
+
+# plot: loss distribution
+
+def plot_loss_distribution(sim_losses, portfolio_amount):
+
+    sim_losses = np.asarray(sim_losses)
+
+    # summary statistics
+    mean_loss = sim_losses.mean()
+    var95  = np.percentile(sim_losses, 95)
+    var99  = np.percentile(sim_losses, 99)
+    var999 = np.percentile(sim_losses, 99.9)
+
+    fig, ax = plt.subplots(figsize=(9, 4))
+
+    # histogram
+    counts, bins, patches = ax.hist(
+        sim_losses,
+        bins=40,
+        edgecolor="white",
+        linewidth=0.7
+    )
+
+    light = "#d8d6ea"     # light purple
+    dark  = "#4b0082"     # dark purple 
+
+    # coloring
+    for patch, left, right in zip(patches, bins[:-1], bins[1:]):
+        midpoint = (left + right) / 2
+        if midpoint <= var95:
+            patch.set_facecolor(light)
+        else:
+            patch.set_facecolor(dark)
+        patch.set_alpha(0.95)
+
+    # vertical reference lines
+    ax.axvline(mean_loss, color="gray"   , lw=1.5,          label="Mean")
+    ax.axvline(var95    , color="#4b0082", lw=3  , ls="--", label="VaR 95%")
+    ax.axvline(var99    , color="#4b0082", lw=2  , ls="-.", label="VaR 99%")
+    ax.axvline(var999   , color="#4b0082", lw=2  , ls=":" , label="VaR 99.9%")
+
+    # annotate vertical reference lines
+    ymax = ax.get_ylim()[1]
+    ax.text(mean_loss, ymax*0.98, "Mean"   , rotation=90, ha="right", va="top", fontsize=10, color="gray")
+    ax.text(var95    , ymax*0.98, "VaR95"  , rotation=90, ha="right", va="top", fontsize=10, color="#4b0082")
+    ax.text(var99    , ymax*0.98, "VaR99"  , rotation=90, ha="right", va="top", fontsize=10, color="#4b0082")
+    ax.text(var999   , ymax*0.98, "VaR99.9", rotation=90, ha="right", va="top", fontsize=10, color="#4b0082")
+
+    # shade the capital region
+    ax.axvspan(var95, sim_losses.max(), color="#4b0082", alpha=0.08)
+
+    # values x-axis
+    from matplotlib.ticker import FuncFormatter
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda x, pos: f"{int(x):,}"))
+    plt.xticks(rotation=35, ha="right")
+
+    # remove axis
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    ax.set_title("Monte-Carlo Portfolio Loss Distribution")
+    ax.set_xlabel("Portfolio Loss (€)")
+    ax.set_ylabel("Frequency")
+
+    # grid
+    ax.grid(True)
+    ax.grid(axis="y", alpha=0.25, linestyle="--")
+
+    # summary box
+    labels = (
+        "Portfolio EAD\n"
+        "Expected Loss\n"
+        "Economic Capital"
+    )
+
+    values = (
+        f"€{portfolio_amount/1e6:.1f}M\n"
+        f"€{mean_loss/1e6:.2f}M\n"
+        f"€{(var999-mean_loss)/1000:.0f}k"
+    )
+
+    ax.text(
+        0.04, 0.90, labels,
+        transform=ax.transAxes,
+        va="top",
+        ha="left",
+        fontsize=10,
+    )
+
+    ax.text(
+        0.28, 0.90, values,
+        transform=ax.transAxes,
+        va="top",
+        ha="right",
+        fontsize=10
+    )
+
+    plt.tight_layout()
+    plt.show()
