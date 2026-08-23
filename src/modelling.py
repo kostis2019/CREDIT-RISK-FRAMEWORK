@@ -316,18 +316,23 @@ def transform_lgd(df, lgd_model):
 
 # function: estimate capital
 
-def estimate_capital(df, method, column_lgd, allocate= False):
+def estimate_capital(df, method, column_lgd, allocate= False, verbose=False):
 
     df = df.copy()
 
     # portfolio total exposure
 
-    print('Portfolio amount: ', df["Amount"].sum())
+    print('Portfolio EAD : ', df["Amount"].sum())
 
     # portfolio EL (deterministic)
 
     df["EL"] = df["PD"] * df["Amount"] * df[column_lgd]
-    print('Portfolio EL    : ', df["EL"].sum())
+    print('Portfolio EL  : ', df["EL"].sum())
+
+    # function outputs
+
+    mc_el  = None
+    mc_cap = None
 
     # method "simple" proxy: capital = 2 * expected loss
 
@@ -381,22 +386,21 @@ def estimate_capital(df, method, column_lgd, allocate= False):
         sim_losses       = np.array(sim_losses)
         sim_losses_indiv = np.array(sim_losses_indiv)
 
-        # check shapes
-        # sim_dr[i]              : portfolio default rate in simulation i
-        # sim_losses[i]          : portfolio loss in simulation i
-        # sim_losses_indiv[i, j] : loss of loan j in simulation i
+        if verbose:
 
-        print('- shapes:')
-        print(sim_dr.shape)
-        print(sim_losses.shape)
-        print(sim_losses_indiv.shape)
-        print('-')
+            # check shapes
+        
+            print('- shapes:')
+            print(sim_dr.shape)           # sim_dr[i]              : portfolio default rate in simulation i
+            print(sim_losses.shape)       # sim_losses[i]          : portfolio loss in simulation i
+            print(sim_losses_indiv.shape) # sim_losses_indiv[i, j] : loss of loan j in simulation i
+            print('-')
 
-        # consistency check
+            # consistency check
 
-        print('- consistency check:')
-        print(np.allclose(sim_losses, sim_losses_indiv.sum(axis=1)))
-        print('-')
+            print('- consistency check:')
+            print(np.allclose(sim_losses, sim_losses_indiv.sum(axis=1)))
+            print('-')
 
         # Monte-Carlo: output
 
@@ -412,11 +416,18 @@ def estimate_capital(df, method, column_lgd, allocate= False):
                                                                     sim_losses_indiv, 
                                                                     n_simulations, 
                                                                     el_total=df["EL"].sum(), 
-                                                                    verbose=True)
+                                                                    verbose=verbose)
+
+        # save output
+        
+        mc_el  = el_summary["EL (MC-simulated)"]
+        mc_cap = loss_summary["Economic Capital"]
 
         # Monte-Carlo: loss distribution
 
-        plot_loss_distribution(sim_losses, df["Amount"].sum())
+        if verbose:
+
+            plot_loss_distribution(sim_losses, df["Amount"].sum())
 
         # Monte-Carlo: allocate 
 
@@ -427,16 +438,20 @@ def estimate_capital(df, method, column_lgd, allocate= False):
             tail        = sim_losses >= loss_summary["VaR 99.9%"]
             tail_losses = sim_losses_indiv[tail]
 
-            print('- shapes:')
-            print(tail_losses.shape)
-            print('-')
+            if verbose:
+    
+                print('- shapes:')
+                print(tail_losses.shape)
+                print('-')
 
             df["CAP"]   = tail_losses.mean(axis=0)
 
-            print('- consistency check:')
-            print(df["CAP"].sum())
-            print(tail_losses.sum(axis=1).mean())
-            print('-')
+            if verbose:
+
+                print('- consistency check:')
+                print(df["CAP"].sum())
+                print(tail_losses.sum(axis=1).mean())
+                print('-')
 
             # average contribution in the tail (one value per loan)
 
@@ -450,10 +465,12 @@ def estimate_capital(df, method, column_lgd, allocate= False):
 
             df["CAP"] = capital_alloc
 
-            print('- consistency check:')
-            print(df["CAP"].sum())
-            print(loss_summary["Economic Capital"])
-            print('-')
+            if verbose:
+
+                print('- consistency check:')
+                print(df["CAP"].sum())
+                print(loss_summary["Economic Capital"])
+                print('-')
 
     # end of estimation
-    return df
+    return df, mc_el, mc_cap

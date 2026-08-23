@@ -491,3 +491,67 @@ def compare_calibration_windows(X_sample, y_sample, calibration_windows, pipelin
         }
 
     return results
+
+# process: estimate EL and CAP over different PD thresholds
+
+def estimate_capital_reduction(df, thresholds):
+
+    from src.modelling import estimate_capital
+
+    probab = df["PD"]
+
+    pd_thresholds      = []
+    approval_rates     = []
+    portfolio_ead      = []
+    expected_loss_det  = []
+    expected_loss_mc   = []
+    economic_capital   = []
+
+    # LOOP OVER PD THRESHOLDS
+
+    for t in thresholds:
+
+        approved = probab <= t
+        approval_rate = approved.sum() / len(df)
+
+        df_approved = df[approved]
+
+        print('running Monte-Carlo...')
+        result_df, mc_el, mc_cap = estimate_capital(df_approved, method="monte-carlo", column_lgd="LossGivenDefault", allocate=False, verbose=False)
+
+        pd_thresholds.append(t)   
+        approval_rates.append(approval_rate)     
+        portfolio_ead.append(df_approved["Amount"].sum())  
+        expected_loss_det.append(result_df["EL"].sum())  
+        expected_loss_mc.append(mc_el)   
+        economic_capital.append(mc_cap)
+
+    results = pd.DataFrame({
+        "PD Threshold":       pd_thresholds,
+        "Approval Rate":      approval_rates,
+        "Portfolio EAD":      portfolio_ead,
+        "Expected Loss":      expected_loss_det,
+        "Expected Loss (MC)": expected_loss_mc,
+        "Economic Capital":   economic_capital,
+        })
+
+    results_display = results.copy()
+    results_display["Portfolio EAD"]      /= 1e6
+    results_display["Expected Loss"]      /= 1e6
+    results_display["Expected Loss (MC)"] /= 1e6
+    results_display["Economic Capital"]   /= 1e3
+
+    display(
+        results_display.style
+        .format({
+            "PD Threshold":       "{:.2f}",
+            "Approval Rate":      "{:.1%}",
+            "Portfolio EAD":      "{:.1f} M€",
+            "Expected Loss":      "{:.2f} M€",
+            "Expected Loss (MC)": "{:.2f} M€",
+            "Economic Capital":   "{:.0f} k€",
+        })
+        .hide(axis="index")
+        )      
+
+    return
