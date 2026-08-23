@@ -26,10 +26,10 @@ The project is inspired by real-world credit risk modelling workflows used in fi
 ⚫ How can portfolio loss distributions be estimated using Monte Carlo simulation?<br>
 ⚫ How can Value-at-Risk (VaR) and Economic Capital be estimated from simulated portfolio losses?<br>
 ⚫ How can Monte Carlo estimates be validated against deterministic Expected Loss?<br>
-🟢 How can portfolio Economic Capital be allocated back to individual exposures?<br>
-🟢 How can Population Stability Index (PSI) and feature drift be monitored?<br>
-🟢 How can model governance and monitoring dashboards support retraining decisions?<br>
+⚫ How can portfolio Economic Capital be allocated back to individual exposures?<br>
 🟢 How can application-time LGD modelling be further improved?<br>
+⚪ How can Population Stability Index (PSI) and feature drift be monitored?<br>
+⚪ How can model governance and monitoring dashboards support retraining decisions?<br>
 ⚪ How can correlated defaults be incorporated into the Monte Carlo simulation?<br>
 ⚪ How can macroeconomic scenarios and stress testing be incorporated?<br>
 ⚪ How can the framework be executed through configuration files?<br>
