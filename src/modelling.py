@@ -334,21 +334,13 @@ def estimate_capital(df, method, column_lgd, allocate= False, verbose=False):
     mc_el  = None
     mc_cap = None
 
-    # method "simple" proxy: capital = 2 * expected loss
+    # reference line: "simple" 2 * expected loss
 
-    if method == "simple":
+    reference_2    =  2 * df["EL"].sum()
 
-        if allocate:
-
-            df["CAP"]    =  2 * df["PD"] * df["Amount"] * df[column_lgd]
-
-    # method "stress" proxy: capital = 5 * expected loss
+    # reference line: "stress" 5 * expected loss
       
-    if method == "stress":
-
-        if allocate:
-
-            df["CAP"]    = 5 * df["PD"] * df["Amount"] * df[column_lgd]
+    reference_5    =  5 * df["EL"].sum()
 
     # method "monte-carlo"
 
