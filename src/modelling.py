@@ -383,9 +383,9 @@ def estimate_capital(df, method, column_lgd, allocate= False, verbose=False):
             # check shapes
         
             print('- shapes:')
-            print(sim_dr.shape)           # sim_dr[i]              : portfolio default rate in simulation i
-            print(sim_losses.shape)       # sim_losses[i]          : portfolio loss in simulation i
-            print(sim_losses_indiv.shape) # sim_losses_indiv[i, j] : loss of loan j in simulation i
+            print('sim_dr.shape=', sim_dr.shape) # portfolio default rate in simulation i
+            print('sim_losses.shape=', sim_losses.shape) # portfolio loss in simulation i
+            print('sim_losses_indiv.shape=', sim_losses_indiv.shape) # loss of loan j in simulation i
             print('-')
 
             # consistency check
@@ -433,7 +433,7 @@ def estimate_capital(df, method, column_lgd, allocate= False, verbose=False):
             if verbose:
     
                 print('- shapes:')
-                print(tail_losses.shape)
+                print('tail_losses.shape=', tail_losses.shape)
                 print('-')
 
             df["CAP"]   = tail_losses.mean(axis=0)
@@ -441,8 +441,8 @@ def estimate_capital(df, method, column_lgd, allocate= False, verbose=False):
             if verbose:
 
                 print('- consistency check:')
-                print(df["CAP"].sum())
-                print(tail_losses.sum(axis=1).mean())
+                print('df["CAP"].sum()=', df["CAP"].sum())
+                print('tail_losses.sum(axis=1).mean()=', tail_losses.sum(axis=1).mean())
                 print('-')
 
             # average contribution in the tail (one value per loan)
@@ -460,8 +460,8 @@ def estimate_capital(df, method, column_lgd, allocate= False, verbose=False):
             if verbose:
 
                 print('- consistency check:')
-                print(df["CAP"].sum())
-                print(loss_summary["Economic Capital"])
+                print('df["CAP"].sum()=', df["CAP"].sum())
+                print('loss_summary["Economic Capital"]=', loss_summary["Economic Capital"])
                 print('-')
 
     # end of estimation
