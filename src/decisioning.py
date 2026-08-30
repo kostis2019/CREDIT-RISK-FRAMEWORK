@@ -506,6 +506,7 @@ def estimate_capital_reduction(df, thresholds):
     expected_loss_det  = []
     expected_loss_mc   = []
     economic_capital   = []
+    economic_capital_reduction = []
 
     # LOOP OVER PD THRESHOLDS
 
@@ -535,11 +536,16 @@ def estimate_capital_reduction(df, thresholds):
         "Economic Capital":   economic_capital,
         })
 
+    results["EL Reduction"] = (1 - results["Expected Loss (MC)"] / results.loc[0, "Expected Loss (MC)"])
+    results["EC Reduction"] = (1 - results["Economic Capital"]   / results.loc[0, "Economic Capital"])
+    
     results_display = results.copy()
     results_display["Portfolio EAD"]      /= 1e6
     results_display["Expected Loss"]      /= 1e6
     results_display["Expected Loss (MC)"] /= 1e6
     results_display["Economic Capital"]   /= 1e3
+    results_display["EL Reduction"]       *= 1e2
+    results_display["EC Reduction"]       *= 1e2
 
     display(
         results_display.style
@@ -550,8 +556,53 @@ def estimate_capital_reduction(df, thresholds):
             "Expected Loss":      "{:.2f} M€",
             "Expected Loss (MC)": "{:.2f} M€",
             "Economic Capital":   "{:.0f} k€",
+            "EL Reduction":       "{:.0f} %",
+            "EC Reduction":       "{:.0f} %",        
         })
         .hide(axis="index")
         )      
 
-    return
+    return results
+
+# plot: pd threshold investigation and plot (LinkedIn version)
+
+def show_approval_vs_reduction(table):
+
+    expected   = table["EL Reduction"]
+    capital    = table["EC Reduction"]
+    approval   = table["Approval Rate"]
+    thresholds = table["PD Threshold"]   
+
+    # PLOT
+
+    fig, ax = plt.subplots(figsize=(7, 4))
+
+    approval   = np.array(approval) * 100
+    expected   = np.array(expected) * 100
+    capital    = np.array(capital)  * 100
+    thresholds = np.array(thresholds)
+
+    ax.plot(approval, expected, color="#B39DDB", marker='o', label='Expected Loss')
+    ax.plot(approval, capital , color="#512DA8", marker='o', label='Economic Capital')
+
+    ax.invert_xaxis()
+    ax.invert_yaxis()
+
+    ax.set_xlabel("approval (%)" , fontsize=10)
+    ax.set_ylabel("reduction (%)", fontsize=10)
+    ax.set_title("Credit Approval vs Risk Reduction", fontsize=12)
+    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), fontsize=9)
+    ax.grid(True, alpha=0.2, linewidth=0.8)
+
+    # top x-axis: pd threshold
+
+    ax_top = ax.twiny()
+
+    ax_top.set_xlim(ax.get_xlim())
+    ax_top.set_xticks(approval)
+    ax_top.set_xticklabels([f"{x:.2f}" for x in thresholds])
+    ax_top.tick_params(axis='x', labelsize=7, pad=2)
+    ax_top.set_xlabel("PD Threshold", fontsize=10, labelpad=4) 
+
+    plt.tight_layout()
+    plt.show()
