@@ -518,14 +518,14 @@ def estimate_capital_reduction(df, thresholds):
         df_approved = df[approved]
 
         print('running Monte-Carlo...')
-        result_df, mc_el, mc_cap = estimate_capital(df_approved, method="monte-carlo", column_lgd="LossGivenDefault", allocate=False, verbose=False)
+        result_df, loss_sum, el_sum = estimate_capital(df_approved, method="monte-carlo", column_lgd="LossGivenDefault", allocate=False, verbose=False)
 
         pd_thresholds.append(t)   
         approval_rates.append(approval_rate)     
         portfolio_ead.append(df_approved["Amount"].sum())  
         expected_loss_det.append(result_df["EL"].sum())  
-        expected_loss_mc.append(mc_el)   
-        economic_capital.append(mc_cap)
+        expected_loss_mc.append(el_sum["EL (MC-simulated)"])   
+        economic_capital.append(loss_sum["Economic Capital"])
 
     results = pd.DataFrame({
         "PD Threshold":       pd_thresholds,
@@ -606,3 +606,59 @@ def show_approval_vs_reduction(table):
 
     plt.tight_layout()
     plt.show()
+
+# process: explain model 
+
+def explain_model(pipeline):
+
+    # extract base model
+    calibrated_model = pipeline.named_steps["model"]
+    base_model = calibrated_model.model_
+    model_type = type(base_model).__name__
+
+    feature_names = pipeline.named_steps[
+        "feature_selection"
+    ].selected_features
+
+    if model_type == "LogisticRegression":
+
+        coefficients = base_model.coef_[0]
+
+        explanation = pd.DataFrame({
+            "feature": feature_names,
+            "coefficient": coefficients,
+            "abs_coefficient": abs(coefficients)
+        }).sort_values(
+            "abs_coefficient",
+            ascending=False
+        )
+
+        # plot:
+
+        fig, ax = plt.subplots(figsize=(6, 4))
+
+        colors = ["blue" if x > 0 else "red" for x in explanation["coefficient"]]
+
+        ax.barh(
+            explanation["feature"],
+            explanation["coefficient"],
+            height=0.6,
+            color=colors,
+            alpha=0.60
+        )
+
+        ax.axvline(0, color="black", linewidth=0.8)
+        ax.invert_yaxis()
+        ax.set_xlabel("Coefficient")
+        ax.set_ylabel("")
+        plt.tight_layout()
+
+    elif model_type in ["GradientBoostingClassifier", "XGBClassifier"]:
+
+        # SHAP implementation
+        pass
+
+    else:
+        raise ValueError(
+            f"Explainability not implemented for {model_type}"
+        )

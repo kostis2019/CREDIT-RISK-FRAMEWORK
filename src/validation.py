@@ -19,7 +19,7 @@ def missing_summary(df):
 
 def validate_predictions(df):
 
-    required = ["PD", "LGD"]
+    required = ["PD", "LGD"]   
     missing = [c for c in required if c not in df.columns]
 
     if missing:

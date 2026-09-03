@@ -46,18 +46,6 @@ class FlexibleCalibratedModel(BaseEstimator, ClassifierMixin):
         self.calibration = calibration  # None, "sigmoid", "isotonic", "shift"
         self.shift = shift
     
-    # def fit(self, X, y):
-    #     self.model_ = clone(self.base_model)
-    #     self.model_.fit(X, y)
-        
-    #     if self.calibration in ["sigmoid", "isotonic"]:
-    #         self.calibrator_ = CalibratedClassifierCV(
-    #             self.model_, method=self.calibration, cv=3
-    #         )
-    #         self.calibrator_.fit(X, y)
-        
-    #     return self
-    
     def fit(self, X, y):
         self.model_ = clone(self.base_model)
         self.model_.fit(X, y)

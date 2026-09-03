@@ -320,14 +320,14 @@ def estimate_capital(df, method, column_lgd, allocate= False, verbose=False):
 
     df = df.copy()
 
-    # portfolio total exposure
-
-    print('Portfolio EAD : ', df["Amount"].sum())
-
-    # portfolio EL (deterministic)
-
+    # calculate EL
     df["EL"] = df["PD"] * df["Amount"] * df[column_lgd]
-    print('Portfolio EL  : ', df["EL"].sum())
+
+    if verbose:
+        # portfolio total exposure
+        print('Portfolio EAD : ', df["Amount"].sum())
+        # portfolio EL (deterministic)
+        print('Portfolio EL  : ', df["EL"].sum())
 
     # function outputs
 
@@ -465,4 +465,5 @@ def estimate_capital(df, method, column_lgd, allocate= False, verbose=False):
                 print('-')
 
     # end of estimation
-    return df, mc_el, mc_cap
+    # return df, mc_el, mc_cap # (previously i wanted to export only 2 values)
+    return df, loss_summary, el_summary
