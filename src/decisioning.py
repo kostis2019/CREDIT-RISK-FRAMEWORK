@@ -609,16 +609,16 @@ def show_approval_vs_reduction(table):
 
 # process: explain model 
 
-def explain_model(pipeline):
+def explain_model(pipeline, X_raw):
+
+    import shap
 
     # extract base model
     calibrated_model = pipeline.named_steps["model"]
     base_model = calibrated_model.model_
     model_type = type(base_model).__name__
 
-    feature_names = pipeline.named_steps[
-        "feature_selection"
-    ].selected_features
+    feature_names = pipeline.named_steps["feature_selection"].selected_features
 
     if model_type == "LogisticRegression":
 
@@ -629,13 +629,12 @@ def explain_model(pipeline):
             "coefficient": coefficients,
             "abs_coefficient": abs(coefficients)
         }).sort_values(
-            "abs_coefficient",
-            ascending=False
+            "abs_coefficient", ascending=False
         )
 
         # plot:
 
-        fig, ax = plt.subplots(figsize=(6, 4))
+        fig, ax = plt.subplots(figsize=(7.45, 5))
 
         colors = ["blue" if x > 0 else "red" for x in explanation["coefficient"]]
 
@@ -644,8 +643,7 @@ def explain_model(pipeline):
             explanation["coefficient"],
             height=0.6,
             color=colors,
-            alpha=0.60
-        )
+            alpha=0.60)
 
         ax.axvline(0, color="black", linewidth=0.8)
         ax.invert_yaxis()
@@ -655,8 +653,69 @@ def explain_model(pipeline):
 
     elif model_type in ["GradientBoostingClassifier", "XGBClassifier"]:
 
-        # SHAP implementation
-        pass
+        if X_raw is None:
+            raise ValueError(
+                "X must be provided for SHAP explainability."
+            )
+
+        X_explain = X_raw
+
+        # using the pre-processing of the pipeline to create the X_explain
+        # X_explain is the dataset to run shap on !!
+        for name, step in pipeline.named_steps.items():
+            if name == "model":
+                break
+                
+            X_explain = step.transform(X_explain)
+
+        # run shap here !!
+        explainer = shap.TreeExplainer(base_model)
+        shap_values = explainer.shap_values(X_explain)
+
+        # average over observations
+        mean_abs_shap = np.mean(np.abs(shap_values), axis=0)
+
+        explanation = pd.DataFrame({
+            "feature": feature_names,
+            "mean_abs_shap": mean_abs_shap
+        }).sort_values(
+            "mean_abs_shap", ascending=False
+        )
+
+        # plot:
+
+        # 1: mean abs shap
+        # 2: beeswarm
+        which_plot = 1
+
+        fig, ax = plt.subplots(figsize=(7.45, 5))
+
+        if which_plot == 1:
+
+            ax.barh(
+                explanation["feature"],
+                explanation["mean_abs_shap"],
+                height=0.6,
+                color="steelblue",
+                alpha=0.60)
+
+            ax.axvline(0, color="black", linewidth=0.8)
+            ax.invert_yaxis()
+            ax.set_xlabel("Mean |SHAP value|")
+            ax.set_ylabel("")
+            plt.tight_layout()
+
+        if which_plot == 2:
+
+            shap.summary_plot(
+            shap_values,
+            X_explain,
+            feature_names=feature_names,
+            plot_type="dot",
+            show=False)
+
+            fig = plt.gcf()
+            fig.set_size_inches(6, 5)
 
     else:
         raise ValueError(
