@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 from IPython.display import display
+import shap
 from src.calibration import intercept_recalibration, PDCalibrator
 from src.metrics import my_metrics
 from src.modelling import apply_pipe
@@ -611,14 +612,13 @@ def show_approval_vs_reduction(table):
 
 def explain_model(pipeline, X_raw):
 
-    import shap
-
     # extract base model
     calibrated_model = pipeline.named_steps["model"]
     base_model = calibrated_model.model_
     model_type = type(base_model).__name__
-
     feature_names = pipeline.named_steps["feature_selection"].selected_features
+
+    print("Model type: ", model_type)
 
     if model_type == "LogisticRegression":
 
@@ -650,6 +650,10 @@ def explain_model(pipeline, X_raw):
         ax.set_xlabel("Coefficient")
         ax.set_ylabel("")
         plt.tight_layout()
+
+        # show plot now!
+        display(fig)
+        plt.close(fig)
 
     elif model_type in ["GradientBoostingClassifier", "XGBClassifier"]:
 
@@ -686,7 +690,7 @@ def explain_model(pipeline, X_raw):
 
         # 1: mean abs shap
         # 2: beeswarm
-        which_plot = 1
+        which_plot = 2
 
         fig, ax = plt.subplots(figsize=(7.45, 5))
 
@@ -696,7 +700,7 @@ def explain_model(pipeline, X_raw):
                 explanation["feature"],
                 explanation["mean_abs_shap"],
                 height=0.6,
-                color="steelblue",
+                color="#FF7A00",
                 alpha=0.60)
 
             ax.axvline(0, color="black", linewidth=0.8)
@@ -716,6 +720,10 @@ def explain_model(pipeline, X_raw):
 
             fig = plt.gcf()
             fig.set_size_inches(6, 5)
+
+        # show plot now!
+        display(fig)
+        plt.close(fig)
 
     else:
         raise ValueError(

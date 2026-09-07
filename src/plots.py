@@ -134,7 +134,7 @@ def variable_vs_dr(variable, x_data, y_data):
 
 # plot: calibration table and plot
 
-def my_calibration(y_true, pd_pred, dataset_name="", show_cal_table=True, plot_title="Calibration Plot"):
+def my_calibration(y_true, pd_pred, dataset_name="", show_cal_table=False, plot_title="Calibration Plot"):
 
     # 1. risk table
 
