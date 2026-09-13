@@ -518,8 +518,8 @@ def estimate_capital_reduction(df, thresholds):
 
         df_approved = df[approved]
 
-        print('running Monte-Carlo...')
-        result_df, loss_sum, el_sum = estimate_capital(df_approved, method="monte-carlo", column_lgd="LossGivenDefault", allocate=False, verbose=False)
+        print('running Monte-Carlo... ', 'PD threshold: ', t)
+        result_df, loss_sum, el_sum, fig = estimate_capital(df_approved, method="monte-carlo", column_lgd="LossGivenDefault", allocate=False, verbose=False, show_plot=False)
 
         pd_thresholds.append(t)   
         approval_rates.append(approval_rate)     
@@ -567,7 +567,7 @@ def estimate_capital_reduction(df, thresholds):
 
 # plot: pd threshold investigation and plot (LinkedIn version)
 
-def show_approval_vs_reduction(table):
+def show_approval_vs_reduction(table, show_plot=True):
 
     expected   = table["EL Reduction"]
     capital    = table["EC Reduction"]
@@ -606,7 +606,13 @@ def show_approval_vs_reduction(table):
     ax_top.set_xlabel("PD Threshold", fontsize=10, labelpad=4) 
 
     plt.tight_layout()
-    plt.show()
+
+    if show_plot:
+        plt.show()
+    else:
+        plt.close(fig)
+
+    return fig
 
 # process: explain model 
 

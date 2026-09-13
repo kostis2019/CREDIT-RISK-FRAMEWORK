@@ -829,7 +829,7 @@ def explore_variable(variable, yr_start, yr_end, breaks=None):
 
 # plot: EL,CAP heatmap on PD,LGD
 
-def my_heatmap(df, variable, column_lgd):
+def my_heatmap(df, variable, column_lgd, show=True):
 
     print('selected variable: ', variable)
 
@@ -903,11 +903,12 @@ def my_heatmap(df, variable, column_lgd):
     ]
     heatmap_table.index = lg_labels
 
-    print(heatmap_table)
+    if show:
+        print(heatmap_table)
 
     ############ plot heatmap
 
-    plt.figure(figsize=(5,4))
+    fig = plt.figure(figsize=(5,4))
 
     im = plt.imshow(
         heatmap_table,
@@ -962,11 +963,17 @@ def my_heatmap(df, variable, column_lgd):
     plt.title(variables[variable]["title"])
 
     plt.tight_layout()
-    plt.show()
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+    return fig
 
 # plot: loss distribution
 
-def plot_loss_distribution(sim_losses, portfolio_amount):
+def plot_loss_distribution(sim_losses, portfolio_amount, show_plot=True):
 
     sim_losses = np.asarray(sim_losses)
 
@@ -976,7 +983,7 @@ def plot_loss_distribution(sim_losses, portfolio_amount):
     var99  = np.percentile(sim_losses, 99)
     var999 = np.percentile(sim_losses, 99.9)
 
-    fig, ax = plt.subplots(figsize=(9, 4))
+    fig, ax = plt.subplots(figsize=(12, 4))
 
     # histogram
     counts, bins, patches = ax.hist(
@@ -1035,12 +1042,18 @@ def plot_loss_distribution(sim_losses, portfolio_amount):
     labels = (
         "Portfolio EAD\n"
         "Expected Loss\n"
+        "VaR95\n"
+        "VaR99\n"
+        "VaR99.9\n"
         "Economic Capital"
     )
 
     values = (
         f"€{portfolio_amount/1e6:.1f}M\n"
         f"€{mean_loss/1e6:.2f}M\n"
+        f"€{var95/1e6:.2f}M\n"
+        f"€{var99/1e6:.2f}M\n"
+        f"€{var999/1e6:.2f}M\n"        
         f"€{(var999-mean_loss)/1000:.0f}k"
     )
 
@@ -1061,4 +1074,143 @@ def plot_loss_distribution(sim_losses, portfolio_amount):
     )
 
     plt.tight_layout()
-    plt.show()
+
+    if show_plot:
+        plt.show()
+    else:
+        plt.close(fig)
+
+    return fig
+
+# report: plot distribution (PD, LGD, EAD)
+
+def plot_distribution(df, variable):
+
+    # -----------------------------
+    # Settings
+    # -----------------------------
+    BASE_COLOR = "black"
+    MEAN_COLOR = "purple"
+    ALPHA_BASE = 0.95
+
+    # -----------------------------
+    # Bins & labels
+    # -----------------------------
+    if variable == "PD":
+
+        bins = [
+            0, 0.05, 0.10, 0.15, 0.20,
+            0.30, 0.40, 0.50, 0.60,
+            0.70, 0.80, 0.90, 1.00
+        ]
+
+        labels = [
+            "0–5%", "5–10%", "10–15%", "15–20%",
+            "20–30%", "30–40%", "40–50%", "50–60%",
+            "60–70%", "70–80%", "80–90%", "90–100%"
+        ]
+
+        BASE_COLOR  = "#5B9BD5"
+
+    elif variable == "LGD":
+
+        bins = [0, 0.10, 0.30, 0.50, 0.70, 1.00]
+
+        labels = [
+            "0–10%", "10–30%", "30–50%",
+            "50–70%", "70–100%"
+        ]
+
+        BASE_COLOR = "#2171B5"
+
+    elif variable == "Amount":
+
+        bins = [
+            0, 1000, 2500, 5000,
+            7500, 10000, 20000, np.inf
+        ]
+
+        labels = [
+            "0–1k", "1–2.5k", "2.5–5k",
+            "5–7.5k", "7.5–10k",
+            "10–20k", ">20k"
+        ]
+
+    else:
+        raise ValueError(
+            "variable must be 'PD', 'LGD' or 'Amount'"
+        )
+
+    # -----------------------------
+    # Aggregation
+    # -----------------------------
+    variable_bin = pd.cut(
+        df[variable],
+        bins=bins,
+        labels=labels,
+        include_lowest=True
+    )
+
+    table = (
+        variable_bin
+        .value_counts(sort=False)
+        .rename("count")
+        .to_frame()
+    )
+
+    table["share"] = (table["count"] / table["count"].sum())
+
+    # -----------------------------
+    # Figure
+    # -----------------------------
+    fig, ax = plt.subplots(figsize=(9, 6))
+
+    x = np.arange(len(labels))
+
+    ax.bar(
+        x,
+        table["share"],
+        width=0.65,
+        color=BASE_COLOR,
+        alpha=ALPHA_BASE
+    )
+
+    # -----------------------------
+    # Mean
+    # -----------------------------
+    mean_value = df[variable].mean()
+
+    # -----------------------------
+    # Ticks & labels
+    # -----------------------------
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, rotation=45, ha="center")
+
+    ax.set_ylabel("Portfolio Share", size=18)
+    ax.set_xlabel(variable, size=18)
+
+    ax.yaxis.set_major_formatter(
+        mtick.PercentFormatter(1, decimals=0)
+    )
+
+    # -----------------------------
+    # Grid / appearance
+    # -----------------------------
+    ax.grid(axis="y", alpha=0.1)
+    ax.grid(axis="x", visible=False)
+
+    ax.tick_params(axis="y", length=0)
+    ax.tick_params(axis="x", length=0)
+
+    ax.set_ylim(
+        0,
+        table["share"].max() * 1.25
+    )
+
+    ax.set_axisbelow(True)
+    ax.tick_params(axis="both", labelsize=16)
+
+    # i close the figure so that it is not displayed, return only
+    plt.close(fig)
+
+    return fig

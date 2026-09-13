@@ -12,6 +12,8 @@ The project is inspired by real-world credit risk modelling workflows used in fi
   <img src="figures/framework_summary_new.png" width="600">
 </p>
 
+**A sample portfolio risk report is available [here](slides/reports/First_Report.pdf), showcasing the framework's portfolio overview, risk analysis, and credit strategy results.**
+
 #### The framework answers questions such as:
 
 ⚫ How can a robust application-time Probability of Default (PD) model be developed from historical lending data?<br>

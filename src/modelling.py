@@ -316,7 +316,7 @@ def transform_lgd(df, lgd_model):
 
 # function: estimate capital
 
-def estimate_capital(df, method, column_lgd, allocate= False, verbose=False):
+def estimate_capital(df, method, column_lgd, allocate= False, verbose=False, show_plot=True):
 
     df = df.copy()
 
@@ -417,9 +417,7 @@ def estimate_capital(df, method, column_lgd, allocate= False, verbose=False):
 
         # Monte-Carlo: loss distribution
 
-        if verbose:
-
-            plot_loss_distribution(sim_losses, df["Amount"].sum())
+        fig = plot_loss_distribution(sim_losses, df["Amount"].sum(), show_plot=show_plot)
 
         # Monte-Carlo: allocate 
 
@@ -465,5 +463,5 @@ def estimate_capital(df, method, column_lgd, allocate= False, verbose=False):
                 print('-')
 
     # end of estimation
-    # return df, mc_el, mc_cap # (previously i wanted to export only 2 values)
-    return df, loss_summary, el_summary
+
+    return df, loss_summary, el_summary, fig
