@@ -134,7 +134,7 @@ def variable_vs_dr(variable, x_data, y_data):
 
 # plot: calibration table and plot
 
-def my_calibration(y_true, pd_pred, dataset_name="", show_cal_table=False, plot_title="Calibration Plot"):
+def my_calibration(y_true, pd_pred, dataset_name="", show_cal_table=False, plot_title="Calibration Plot", bins=None):
 
     # 1. risk table
 
@@ -146,7 +146,8 @@ def my_calibration(y_true, pd_pred, dataset_name="", show_cal_table=False, plot_
     # a. equal bins:
     #bins = np.linspace(0, 1, 21)
     # b. manual bins:
-    bins = [0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    if bins == None:
+        bins = [0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 
     df_eval = pd.DataFrame({
         "probability": probab, # predicted PDs
@@ -199,9 +200,9 @@ def my_calibration(y_true, pd_pred, dataset_name="", show_cal_table=False, plot_
     fig, ax = plt.subplots(figsize=(5,4)) # i do this to: 1. show figure 2. return figure
 
     # Calibration lines:
-    ax.plot(bin_centers, table["Avg_PD"],                color='lightskyblue', marker='o', label="Average Predicted PD")
-    ax.plot(bin_centers, table["Observed_Default_Rate"], color='limegreen',    marker='o', label="Observed Default Rate")
-    ax.plot([0,1],[0,1],'--',                            color='black'                   , label="Perfect Calibration")
+    ax.plot(bin_centers, table["Avg_PD"],                color='lightskyblue', marker='o', label="Avg. Predicted PD")
+    ax.plot(bin_centers, table["Observed_Default_Rate"], color='limegreen',    marker='o', label="Observed DR")
+    ax.plot([0,max(bins)],[0,max(bins)],'--',            color='black',                    label="Perfect Calibration")
 
     # Confidence interval shading:
     ax.fill_between(
@@ -216,7 +217,7 @@ def my_calibration(y_true, pd_pred, dataset_name="", show_cal_table=False, plot_
     ax.set_xlabel("PD Bin")
     ax.set_ylabel("PD,DR")
     ax.set_title(plot_title)
-    ax.legend()
+    ax.legend(fontsize=8)
     # -> set ticks to bin edges
     ax.set_xticks(bins)
     # -> add vertical grid aligned with bins
@@ -224,11 +225,18 @@ def my_calibration(y_true, pd_pred, dataset_name="", show_cal_table=False, plot_
     # -> add horizontal grid 
     ax.grid(axis='y', linestyle='-', alpha=0.5)
     # optional: rotate labels if crowded
-    ax.set_xticklabels(bins, rotation=45)
-    
-    plt.tight_layout()
-    
+    #ax.set_xticklabels(bins, rotation=45)
+    # optional: make plot square
+    ax.set_xlim(0, max(bins))
+    ax.set_ylim(0, max(bins))
+    ax.set_aspect("equal", adjustable="box")
+
+    # apply slide style 
+    from src.utils import apply_slide_style
+    apply_slide_style(ax)
+
     # show plot now!
+    plt.tight_layout()
     display(fig)
     plt.close(fig)
 
@@ -908,9 +916,9 @@ def my_heatmap(df, variable, column_lgd, show=True):
 
     ############ plot heatmap
 
-    fig = plt.figure(figsize=(5,4))
+    fig, ax = plt.subplots(figsize=(5, 4))
 
-    im = plt.imshow(
+    im = ax.imshow(
         heatmap_table,
         aspect="auto",
         cmap=variables[variable]["cmap"],
@@ -918,8 +926,9 @@ def my_heatmap(df, variable, column_lgd, show=True):
         vmax=heatmap_table.values.max()
     )
 
-    cbar = plt.colorbar(
+    cbar = fig.colorbar(
         im,
+        ax=ax,
         label=variables[variable]["label"]
     )
 
@@ -927,28 +936,30 @@ def my_heatmap(df, variable, column_lgd, show=True):
         mtick.PercentFormatter(1)
     )
 
-    plt.xticks(
+    ax.set_xticks(
         range(len(heatmap_table.columns)),
         heatmap_table.columns.astype(str),
         rotation=45
     )
 
-    plt.yticks(
+    ax.set_yticks(
         range(len(heatmap_table.index)),
         heatmap_table.index.astype(str),
         rotation=45
     )
 
     # -------- cell annotations ------------
+
     for i in range(heatmap_table.shape[0]):
         for j in range(heatmap_table.shape[1]):
 
-            value = heatmap_table.iloc[i,j]
+            value = heatmap_table.iloc[i, j]
 
             if pd.notna(value):
-            
+
                 color = "white" if value > 0.12 else "black"
-                plt.text(
+
+                ax.text(
                     j,
                     i,
                     f"{value:.1%}",
@@ -958,9 +969,13 @@ def my_heatmap(df, variable, column_lgd, show=True):
                     fontsize=9
                 )
 
-    plt.xlabel("PD Bucket")
-    plt.ylabel("LGD Bucket")
-    plt.title(variables[variable]["title"])
+    ax.set_xlabel("PD Bucket")
+    ax.set_ylabel("LGD Bucket")
+    ax.set_title(variables[variable]["title"])
+
+    # Apply slide style
+    from src.utils import apply_slide_style
+    apply_slide_style(ax)
 
     plt.tight_layout()
 

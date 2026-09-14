@@ -1,3 +1,4 @@
+from optparse import TitledHelpFormatter
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -12,7 +13,7 @@ from src.utils import display_table
 
 # plot: pd threshold investigation and plot
 
-def show_approval_vs_default_on_thresholds(y_true, pd_pred, pd_thresholds):
+def show_approval_vs_default_on_thresholds(y_true, pd_pred, pd_thresholds, title="Threshold Plot", invert=False):
 
     probab = pd_pred
     target = y_true
@@ -43,36 +44,67 @@ def show_approval_vs_default_on_thresholds(y_true, pd_pred, pd_thresholds):
 
     # CUT-OFF PLOT
 
-    plt.figure(figsize=(5,4))
+    fig, ax = plt.subplots(figsize=(5, 4))
 
     approval = np.array(approval_rates) * 100
     default  = np.array(default_rates) * 100
-    plt.plot(approval, default, color='black', marker='o')
+
+    ax.plot(approval, default, color='black', marker='o')
 
     # Annotate each point with cut-off
     for i, cutoff in enumerate(thresholds):
-        plt.text(approval[i]+5, default[i],
-                 f"{cutoff:.2f}",
-                 fontsize=11,
-                 verticalalignment='bottom',
-                 color='lightskyblue')
+        ax.text(
+            approval[i] - 3,
+            default[i] - 0.0,
+            f"{cutoff:.2f}",
+            fontsize=7,
+            fontweight="bold",
+            verticalalignment='bottom',
+            color='lightskyblue'
+        )
 
     # Baseline line
     baseline_default = 14.8
-    plt.axhline(y=baseline_default, linestyle='--', color='black')
-    plt.text(max(approval)*0.25, baseline_default-0.05,
-             "Baseline default (14.8%)",
-             verticalalignment='top')
+
+    ax.axhline(
+        y=baseline_default,
+        linestyle='--',
+        color='black'
+    )
+
+    ax.text(
+        max(approval) * 0.5,
+        baseline_default - 0.05,
+        "Baseline default (14.8%)",
+        verticalalignment='top'
+    )
 
     # chosen point
-    plt.scatter(81.27, 12.23, color='limegreen', marker='o', s=200)
+    ax.scatter(
+        81.27,
+        12.23,
+        color='limegreen',
+        marker='o',
+        s=200
+    )
 
-    plt.xlabel("approval (%)")
-    plt.ylabel("default (%)")
-    plt.title("Threshold Plot")
-    #plt.legend()
-    plt.grid(True)
+    ax.set_xlabel("approval (%)")
+    ax.set_ylabel("default (%)")
+    ax.set_title(title)
+    ax.grid(True, alpha=0.2, linewidth=0.8)
+
+    # 100 -> 0
+    if invert:
+        ax.invert_xaxis()
+
+    # Apply slide style
+    from src.utils import apply_slide_style
+    apply_slide_style(ax)
+
+    plt.tight_layout()
     plt.show()
+
+    return fig
 
 # plot: pd threshold investigation and plot (LinkedIn version)
 
@@ -567,7 +599,7 @@ def estimate_capital_reduction(df, thresholds):
 
 # plot: pd threshold investigation and plot (LinkedIn version)
 
-def show_approval_vs_reduction(table, show_plot=True):
+def show_approval_vs_reduction(table, show_plot=True, invert_y=True):
 
     expected   = table["EL Reduction"]
     capital    = table["EC Reduction"]
@@ -576,7 +608,7 @@ def show_approval_vs_reduction(table, show_plot=True):
 
     # PLOT
 
-    fig, ax = plt.subplots(figsize=(7, 4))
+    fig, ax = plt.subplots(figsize=(5, 4))
 
     approval   = np.array(approval) * 100
     expected   = np.array(expected) * 100
@@ -587,25 +619,30 @@ def show_approval_vs_reduction(table, show_plot=True):
     ax.plot(approval, capital , color="#512DA8", marker='o', label='Economic Capital')
 
     ax.invert_xaxis()
-    ax.invert_yaxis()
+    if invert_y:
+        ax.invert_yaxis()
 
     ax.set_xlabel("approval (%)" , fontsize=10)
     ax.set_ylabel("reduction (%)", fontsize=10)
-    ax.set_title("Credit Approval vs Risk Reduction", fontsize=12)
-    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), fontsize=9)
+    ax.set_title("Risk Reduction", fontsize=12)
+    ax.legend(loc="upper left", fontsize=9)
     ax.grid(True, alpha=0.2, linewidth=0.8)
 
     # top x-axis: pd threshold
 
+    threshold_color = "lightskyblue"
     ax_top = ax.twiny()
-
     ax_top.set_xlim(ax.get_xlim())
     ax_top.set_xticks(approval)
-    ax_top.set_xticklabels([f"{x:.2f}" for x in thresholds])
-    ax_top.tick_params(axis='x', labelsize=7, pad=2)
-    ax_top.set_xlabel("PD Threshold", fontsize=10, labelpad=4) 
+    ax_top.set_xticklabels([f"{x:.2f}" for x in thresholds], fontweight="bold", color = threshold_color)
+    ax_top.tick_params(axis='x', labelsize=7, pad=2, color = threshold_color)
+    ax_top.set_xlabel("PD Threshold", fontsize=10, labelpad=4, fontweight="bold", color = threshold_color) 
 
     plt.tight_layout()
+
+    # Apply slide style
+    from src.utils import apply_slide_style
+    apply_slide_style(ax)
 
     if show_plot:
         plt.show()

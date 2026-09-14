@@ -50,3 +50,17 @@ def display_table(df, decimals=3, hide_index=True):
         styler = styler.hide(axis="index")
 
     display(styler)
+
+# utility: apply common plot style 
+
+def apply_slide_style(ax, ax_top=None):
+
+    ax.tick_params(axis="both", labelsize=11)
+    ax.xaxis.label.set_size(12)
+    ax.yaxis.label.set_size(12)
+    ax.title.set_size(14)
+    ax.title.set_weight("bold")
+
+    if ax_top is not None:
+        ax_top.tick_params(axis="x", labelsize=11)
+        ax_top.xaxis.label.set_size(12)
