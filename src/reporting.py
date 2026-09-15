@@ -98,7 +98,7 @@ def create_risk_report(overview,
     LOSS_img = save_report_image(loss_distribution , output_dir / "plot_6.png", display_width=7.5)
 
     # Save report images for Page 3
-    red_img  = save_report_image(strategy_plot , output_dir / "plot_7.png", display_width=8)
+    red_img  = save_report_image(strategy_plot , output_dir / "plot_7.png", display_width=5)
 
     # Grid style
     grid_style = TableStyle([
@@ -158,6 +158,7 @@ def create_risk_report(overview,
     )
     grid_3.setStyle(grid_style)
     grid_3.setStyle(TableStyle([("TOPPADDING", (0, 0), (-1, -1), 12),]))
+    grid_3.setStyle(TableStyle([("RIGHTPADDING", (0, 0), (-1, -1), 48),]))
 
     # BUILD STORY
     story = [

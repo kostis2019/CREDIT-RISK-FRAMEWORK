@@ -1055,6 +1055,10 @@ def plot_loss_distribution(sim_losses, portfolio_amount, show_plot=True):
         fontsize=10
     )
 
+    # apply slide style 
+    from src.utils import apply_slide_style
+    apply_slide_style(ax)
+
     plt.tight_layout()
 
     if show_plot:
