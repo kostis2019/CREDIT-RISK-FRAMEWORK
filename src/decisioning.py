@@ -200,12 +200,12 @@ def my_impact(y_true, pd_pred, pd_threshold=0.20):
     ### ===== THRESHOLD =====
 
     df["accepted_BEFORE"] = (df["y_pred"] < 1.00).astype(int)
-    df["accepted_AFTER"]  = (df["y_pred"] < 0.20).astype(int)
+    df["accepted_AFTER"]  = (df["y_pred"] < pd_threshold).astype(int)
 
-    print("\n--- accepted:")
+    print("\n--- ACCEPTANCE BEFORE/AFTER PD THRESHOLD:")
     print("Total observations:", len(df))
     print("Accepted BEFORE:", df["accepted_BEFORE"].sum())
-    print("Accepted AFTER:", df["accepted_AFTER"].sum())
+    print("Accepted AFTER: ", df["accepted_AFTER"].sum())
     print(f"Approval rate AFTER: {df['accepted_AFTER'].mean():.2%}")
 
     ### ===== BINNING =====
@@ -296,8 +296,8 @@ def my_impact(y_true, pd_pred, pd_threshold=0.20):
     # remove empty bins 
     table = table[table["share_before"] > 0]
 
-    print('\n--- final table')
-    display_table(table)
+    #print('\n--- final table')
+    #display_table(table)
 
     ### ===== PLOTTING =====
 

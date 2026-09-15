@@ -48,6 +48,38 @@ def create_target_def12(full_dataset):
 
     return full_dataset, DR_summary
 
+# handle missing values (conventionally)
+
+def handle_missing_values(X_trai, X_test):
+
+    # MISSING VALUES
+
+    # separate nums/cats
+    cat_cols = X_trai.select_dtypes(include=["category"]).columns
+    num_cols = X_trai.select_dtypes(include=["int64", "float64"]).columns
+
+    # substitution values for numerical variables: median in training set
+    median_vals = X_trai[num_cols].median()
+
+    print('SUBSTITUTION VALUES FOR NUMS: ')
+    print(median_vals)
+
+    # substitution values for categorical variables: most common in training set
+    common_vals = X_trai[cat_cols].mode().iloc[0]
+
+    print('SUBSTITUTION VALUES FOR CATS: ')
+    print(common_vals)
+
+    # replace NaNs in numerical variables
+    X_trai[num_cols] = X_trai[num_cols].fillna(median_vals)
+    X_test[num_cols] = X_test[num_cols].fillna(median_vals)
+
+    # replace NaNs in categorical variables
+    X_trai[cat_cols] = X_trai[cat_cols].fillna(common_vals)
+    X_test[cat_cols] = X_test[cat_cols].fillna(common_vals)
+
+    return X_trai, X_test
+
 # map special features
 
 class SpecialMappings(BaseEstimator, TransformerMixin):

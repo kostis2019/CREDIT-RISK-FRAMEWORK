@@ -246,51 +246,7 @@ def my_calibration(y_true, pd_pred, dataset_name="", show_cal_table=False, plot_
 
 # plot: default capture curve
 
-def default_capture_curve_v0(y_true, pd_pred):
-
-    # Create DataFrame
-    df = pd.DataFrame({
-        "y_true": y_true,
-        "y_pred": pd_pred
-    })
-
-    # Sort by predicted PD (highest risk first)
-    df = df.sort_values(by="y_pred", ascending=False).reset_index(drop=True)
-
-    # Cumulative population %
-    df["cum_population"] = np.arange(1, len(df)+1) / len(df)
-
-    # Cumulative defaults captured
-    df["cum_defaults"] = df["y_true"].cumsum()
-
-    # Total defaults
-    total_defaults = df["y_true"].sum()
-
-    # Avoid division by zero
-    df["cum_default_rate"] = df["cum_defaults"] / total_defaults if total_defaults > 0 else 0
-
-    # 📊 Plot
-
-    plt.figure(figsize=(5,4))
-
-    plt.plot(df["cum_population"], df["cum_default_rate"], label="Logistic Regression", color="limegreen")
-
-    # Random baseline (diagonal)
-    plt.plot([0, 1], [0, 1], linestyle="--", label="Random", color="lightskyblue")
-
-    plt.xlabel("Cumulative % of Population")
-    plt.ylabel("Cumulative % of Defaults Captured")
-    plt.title("Default Capture Curve")
-    plt.legend()
-    plt.grid(True)
-
-    plt.show()
-
-    # print captured defaults
-    # for i in range(df.shape[0]):
-    #    print(f"cum_population={df['cum_population'].iloc[i]:5.5f}", f"cum_default_rate={df['cum_default_rate'].iloc[i]:5.5f}")
-
-def default_capture_curve(y_true, models):
+def default_capture_curve(y_true, models, show=True):
 
     results = {}
 
@@ -325,7 +281,7 @@ def default_capture_curve(y_true, models):
 
     # 📊 Plot
 
-    plt.figure(figsize=(5,4))
+    fig, ax = plt.subplots(figsize=(5, 4))
 
     colors = [
     "limegreen",
@@ -338,18 +294,29 @@ def default_capture_curve(y_true, models):
     ]
 
     for (name, cums), color in zip(results.items(), colors):
-        plt.plot(cums["cum_population"], cums["cum_default_rate"], label=name, linewidth=2, color=color)
+        ax.plot(cums["cum_population"], cums["cum_default_rate"], label=name, linewidth=2, color=color)
 
     # Random baseline (diagonal)
-    plt.plot([0, 1], [0, 1], linestyle="--", label="Random", color="lightskyblue")
+    ax.plot([0, 1], [0, 1], linestyle="--", label="Random", color="lightskyblue")
 
-    plt.xlabel("Cumulative % of Population")
-    plt.ylabel("Cumulative % of Defaults Captured")
-    plt.title("Default Capture Curve")
-    plt.legend()
-    plt.grid(True)
+    ax.set_xlabel("Cumulative % of Population")
+    ax.set_ylabel("Cumulative % of Defaults Captured")
+    ax.set_title("Default Capture Curve")
+    ax.legend()
+    ax.grid(True)
 
-    plt.show()
+    # Apply slide style
+    from src.utils import apply_slide_style
+    apply_slide_style(ax)
+
+    plt.tight_layout()
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+    return fig
 
 # plot: EL concentration / PDbins
 
