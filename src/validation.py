@@ -10,8 +10,8 @@ def missing_summary(df):
         "missing_percent": (df.isna().sum() / total_rows) * 100
     })
     
-    #summary = summary[summary["missing_count"] > 0]  # keep only columns with missing
-    summary = summary.sort_values(by="missing_percent", ascending=False)
+    summary = summary[summary["missing_count"] > 0]  # keep only columns with missing
+    #summary = summary.sort_values(by="missing_percent", ascending=False)
     
     return summary
 
