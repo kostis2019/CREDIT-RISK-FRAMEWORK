@@ -1085,13 +1085,13 @@ def plot_distribution(df, variable):
     if variable == "PD":
 
         bins = [
-            0, 0.05, 0.10, 0.15, 0.20,
+            0, 0.10, 0.20,
             0.30, 0.40, 0.50, 0.60,
             0.70, 0.80, 0.90, 1.00
         ]
 
         labels = [
-            "0–5%", "5–10%", "10–15%", "15–20%",
+            "0–10%", "10–20%",
             "20–30%", "30–40%", "40–50%", "50–60%",
             "60–70%", "70–80%", "80–90%", "90–100%"
         ]
@@ -1172,8 +1172,8 @@ def plot_distribution(df, variable):
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=45, ha="center")
 
-    ax.set_ylabel("Portfolio Share", size=18)
-    ax.set_xlabel(variable, size=18)
+    ax.set_ylabel("Portfolio Share", size=24)
+    ax.set_xlabel(variable, size=24)
 
     ax.yaxis.set_major_formatter(
         mtick.PercentFormatter(1, decimals=0)
@@ -1194,9 +1194,13 @@ def plot_distribution(df, variable):
     )
 
     ax.set_axisbelow(True)
-    ax.tick_params(axis="both", labelsize=16)
+    ax.tick_params(axis="both", labelsize=22)
 
-    # i close the figure so that it is not displayed, return only
+    # apply slide style 
+    #from src.utils import apply_slide_style
+    #apply_slide_style(ax)
+
+    plt.tight_layout()
     plt.close(fig)
 
     return fig
