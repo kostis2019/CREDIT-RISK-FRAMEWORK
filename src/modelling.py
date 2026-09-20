@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
-from src.feature_engineering import create_target_def12
+#from src.feature_engineering import create_target_def12
 from src.metrics import my_monte_carlo_metrics
-from src.preprocessing import my_input_load
+#from src.preprocessing import my_input_load
 from src.plots import plot_loss_distribution
-from src.utils import display_table
+#from src.utils import display_table
 from sklearn.linear_model import LinearRegression
 import xgboost
 
@@ -13,7 +13,7 @@ import xgboost
 #           - calculate EL       (optional)
 #           - sensitivity on LGD (optional)
 
-def apply_pipe(df, pipeline, calculate_el=False, sensitivity_lgd=False):
+def apply_pipe_PD(df, pipeline, calculate_el=False, sensitivity_lgd=False):
 
     df = df.copy()
     df["PD"]    = pipeline.predict_proba(df)[:,1]
@@ -55,106 +55,6 @@ def estimate_el(df, column_lgd):
     df = df.copy()
 
     df["EL"]    = df["PD"] * df["Amount"] * df[column_lgd]
-
-    return df
-
-# function: estimate LGD (replaced by fit_lgd, transform_lgd)
-
-def estimate_lgd_v0(df, lgd_dataset, method, one_value=0.15, one_variable=None, verbose=False):
-
-    df = df.copy()
-
-    ###### ESTIMATE ######
-
-    print('LGD estimation method: ', method)
-    print('Feature: ', one_variable)
-
-    if method == 'one_value':
-
-        value    = one_value
-
-    if method == 'historical_avg':
-
-        value    = lgd_dataset['LossGivenDefault'].mean()
-        
-    if method == "univariate":
-
-        # EVALUATION DF
-        df_eval = pd.DataFrame({
-        "feature": lgd_dataset[one_variable],
-        "lgd"    : lgd_dataset["LossGivenDefault"],
-        })
-
-        # Categorical OR Numerical?
-        if df_eval["feature"].nunique() > 20:
-
-            numerical = True
-
-        else:
-
-            numerical = False
-
-        # Numerical variable → bin
-        if numerical:
-
-            bins = pd.qcut(df_eval["feature"], q=10, duplicates="drop", retbins=True)[1]
-            df_eval["group"] = pd.cut(df_eval["feature"], bins=bins, precision=2, include_lowest=True)
-
-        # Categorical variable
-        else:
-
-            df_eval["group"] = df_eval["feature"]
-
-        # AVERAGE LGD AND RECOVERY RATE
-        lgd_table = (
-        df_eval
-        .groupby("group", observed=False)
-        .agg(
-        count=("lgd", "count"),
-        lgd=("lgd", "mean"),
-        std=("lgd", "std"),
-        recovery_rate=("lgd", lambda x: (x == 0).mean()),
-        positive_lgd=("lgd", lambda x: x[x > 0].mean())
-        ))
-        if verbose:
-            display(lgd_table)
-
-        # MAP
-        lgd_mapping = lgd_table["lgd"].to_dict()
-        if verbose:
-            display(lgd_mapping)
-
-    if method == 'linear_regression':
-        
-        print('in progress')
-
-    if method == 'gradient_boosting_regression':
-        
-        print('in progress')
-
-    ###### APPLY ######
-
-    if method == 'one_value':
-
-        df["LGD"]    = value
-
-    if method == 'historical_avg':
-
-        df["LGD"]    = value
-
-    if method == "univariate":
-
-        if numerical:
-
-            df["group"] = pd.cut(df[one_variable], bins=bins, include_lowest=True)
-            df["LGD"] = df["group"].map(lgd_mapping)
-
-        else:
-
-            df["LGD"] = df[one_variable].map(lgd_mapping)
-
-        # unseen categories
-        df["LGD"] = df["LGD"].fillna(lgd_table["lgd"].mean())
 
     return df
 
@@ -316,16 +216,16 @@ def transform_lgd(df, lgd_model):
 
 # function: estimate capital
 
-def estimate_capital(df, method, column_lgd, allocate= False, verbose=False, show_plot=True):
+def estimate_capital(df, method, column_lgd, column_def="default12", column_ead="Amount", allocate= False, verbose=False, show_plot=True):
 
     df = df.copy()
 
     # calculate EL
-    df["EL"] = df["PD"] * df["Amount"] * df[column_lgd]
+    df["EL"] = df["PD"] * df[column_ead] * df[column_lgd]
 
     if verbose:
         # portfolio total exposure
-        print('Portfolio EAD : ', df["Amount"].sum())
+        print('Portfolio EAD : ', df[column_ead].sum())
         # portfolio EL (deterministic)
         print('Portfolio EL  : ', df["EL"].sum())
 
@@ -364,7 +264,7 @@ def estimate_capital(df, method, column_lgd, allocate= False, verbose=False, sho
             sim_dr.append(sim_defaults.mean())
 
             # simulate losses
-            loss = (sim_defaults * df["Amount"] * df[column_lgd])
+            loss = (sim_defaults * df[column_ead] * df[column_lgd])
 
             # portfolio loss for simulation i
             loss_total = loss.sum()
@@ -407,7 +307,9 @@ def estimate_capital(df, method, column_lgd, allocate= False, verbose=False, sho
                                                                     sim_losses, 
                                                                     sim_losses_indiv, 
                                                                     n_simulations, 
-                                                                    el_total=df["EL"].sum(), 
+                                                                    df["EL"].sum(),
+                                                                    column_def, 
+                                                                    column_ead, 
                                                                     verbose=verbose)
 
         # save output
@@ -417,7 +319,7 @@ def estimate_capital(df, method, column_lgd, allocate= False, verbose=False, sho
 
         # Monte-Carlo: loss distribution
 
-        fig = plot_loss_distribution(sim_losses, df["Amount"].sum(), show_plot=show_plot)
+        fig = plot_loss_distribution(sim_losses, df[column_ead].sum(), show_plot=show_plot)
 
         # Monte-Carlo: allocate 
 

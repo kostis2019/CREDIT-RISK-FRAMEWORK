@@ -50,13 +50,17 @@ def create_target_def12(full_dataset):
 
 # handle missing values (conventionally)
 
-def handle_missing_values(X_trai, X_test):
+def handle_missing_values(X_trai, X_test, do_not_handle=[]):
 
     # MISSING VALUES
 
     # separate nums/cats
     cat_cols = X_trai.select_dtypes(include=["category"]).columns
     num_cols = X_trai.select_dtypes(include=["int64", "float64"]).columns
+
+    # remove columns that should not be handled
+    cat_cols = cat_cols.difference(do_not_handle)
+    num_cols = num_cols.difference(do_not_handle)
 
     # substitution values for numerical variables: median in training set
     median_vals = X_trai[num_cols].median()
@@ -130,17 +134,6 @@ class SpecialMappings(BaseEstimator, TransformerMixin):
 
     def fit(self, X, y=None):
         return self
-    
-    # def transform(self, X):
-    #     X = X.copy()
-
-    #     for col, mapping in self.mappings.items():
-    #         if col in X.columns:
-    #             X[col] = X[col].map(mapping)               
-    #             # 👉 cast to int AFTER mapping
-    #             X[col] = X[col].astype("Int64")
-        
-    #     return X
 
     def transform(self, X):
         X = X.copy()
@@ -154,6 +147,65 @@ class SpecialMappings(BaseEstimator, TransformerMixin):
 
                 X[col] = X[col].map(mapping)
                 X[col] = X[col].astype("Int64")
+
+                if self.verbose:
+                    print("- After mapping: ")
+                    print(X[col].value_counts(dropna=False))
+
+        return X
+
+# map special features: mortgage dataset
+
+class SpecialMappingsMortgage(BaseEstimator, TransformerMixin):
+
+    def __init__(self, verbose=False):
+
+        self.verbose = verbose
+
+    # define all mappings here
+    
+        self.mappings = {
+            
+            # "PropertyType": {
+            #     "Apartment": 1,
+            #     "Single-family house": 2,
+            #     "Townhouse": 3,
+            #     "Double-family house": 4,
+            #     "Residential real estate": 5,
+            #     "Apartment block": 6,
+            #     "Unknown": np.nan
+            # },
+
+            # 👉 add more variables here
+            # "AnotherVariable": {
+            #     "A": 1,
+            #     "B": 2,
+            #     "C": np.nan
+            # }
+        }
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X = X.copy()
+
+        for col, mapping in self.mappings.items():
+            if col in X.columns:
+
+                if self.verbose:
+                    print("- Before mapping: ")
+                    print(X[col].value_counts(dropna=False))
+        
+                # mapping
+                X[col] = X[col].map(mapping)
+
+                # ordinal categorical variables
+                X[col] = X[col].astype("Int64")
+
+                # nominal categorical variables
+                if col == "PropertyType": 
+                    X[col] = X[col].astype("category")
 
                 if self.verbose:
                     print("- After mapping: ")

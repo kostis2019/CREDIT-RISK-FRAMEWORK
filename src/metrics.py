@@ -197,7 +197,7 @@ def my_regression_metrics(y_obs, y_pred, dataset_name="", verbose=True):
 
 # function: my monte-carlo metrics
 
-def my_monte_carlo_metrics(df, sim_dr, sim_losses, sim_losses_indiv, n_simulations, el_total, verbose=True):
+def my_monte_carlo_metrics(df, sim_dr, sim_losses, sim_losses_indiv, n_simulations, el_total, column_def='default12', column_ead='Amount', verbose=True):
 
     #    sim_dr           : simulated DR
     #    sim_losses       : per simulation portfolio loss
@@ -206,7 +206,7 @@ def my_monte_carlo_metrics(df, sim_dr, sim_losses, sim_losses_indiv, n_simulatio
     # Monte-Carlo: validate
 
     val_summary = {
-        "DR (mean) observed"  : df['default12'].mean(),
+        "DR (mean) observed"  : df[column_def].mean(),
         "PD (mean) predicted" : df['PD'].mean(),
         "Simulated DR (mean)" : np.mean(sim_dr),
         "Simulated DR (std)"  : np.std(sim_dr),
@@ -228,7 +228,7 @@ def my_monte_carlo_metrics(df, sim_dr, sim_losses, sim_losses_indiv, n_simulatio
     # Monte-Carlo: summarize simulated losses
 
     loss_summary = {
-        "EAD"        : df["Amount"].sum(),
+        "EAD"        : df[column_ead].sum(),
         "Loss (min)" : sim_losses.min(),
         "Loss (mean)": sim_losses.mean(),
         "Loss (std)" : sim_losses.std(),

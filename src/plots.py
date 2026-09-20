@@ -1,10 +1,47 @@
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 from IPython.display import display
 from src.preprocessing import my_input_load
 from src.utils import display_table
+
+# plot: correlation
+
+def show_correlation(ds, show_pairs_above=0.8):
+
+    corr = ds.corr()
+
+    plt.figure(figsize=(9, 7))
+
+    sns.heatmap(
+        corr,
+        annot=True,
+        fmt=".2f",
+        cmap="coolwarm",
+        center=0,
+        square=True,
+        linewidths=0.5,
+        cbar=False,
+        annot_kws={"fontsize": 6}
+    )
+
+    plt.xticks(rotation=90)
+    plt.yticks(rotation=0)
+
+    plt.tight_layout()
+    plt.show()
+
+    # Correlation pairs above threshold
+    print(f"\nCORRELATION PAIRS ABOVE {show_pairs_above}:")
+    for i in range(len(corr.columns)):
+        for j in range(i):
+            if abs(corr.iloc[i, j]) > show_pairs_above:
+                print(
+                    f"{corr.columns[i]} - {corr.columns[j]}: "
+                    f"{corr.iloc[i, j]:.2f}"
+                )
 
 # plot: default rate per year
 
@@ -16,7 +53,7 @@ def my_dr_plot(DR_summary, year_start, year_end):
 
     DR_summary = DR_summary[(DR_summary.LoanYear >= year_start) & (DR_summary.LoanYear <= year_end)]
 
-    fig, ax1 = plt.subplots(figsize=(6,3))
+    fig, ax1 = plt.subplots(figsize=(5,4))
 
     # Bars: number of loans
     ax1.bar(
@@ -29,10 +66,11 @@ def my_dr_plot(DR_summary, year_start, year_end):
     ax1.set_xlabel("Loan Origination Year")
     ax1.set_ylabel("Number of Loans")
     ax1.grid(True, linestyle="--", linewidth=0.6, alpha=0.6)
+    # only integer years
+    ax1.set_xticks(DR_summary["LoanYear"])
 
     # Line: default rate
     ax2 = ax1.twinx()
-
     ax2.plot(
         DR_summary["LoanYear"],
         DR_summary["default_rate"],
@@ -43,7 +81,6 @@ def my_dr_plot(DR_summary, year_start, year_end):
         color="limegreen",
         linewidth=2
     )
-
     ax2.set_ylabel("Default Rate")
     ax2.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
 
@@ -1149,7 +1186,7 @@ def plot_distribution(df, variable):
     # -----------------------------
     # Figure
     # -----------------------------
-    fig, ax = plt.subplots(figsize=(9, 6))
+    fig, ax = plt.subplots(figsize=(5, 4))
 
     x = np.arange(len(labels))
 
@@ -1197,10 +1234,149 @@ def plot_distribution(df, variable):
     ax.tick_params(axis="both", labelsize=22)
 
     # apply slide style 
-    #from src.utils import apply_slide_style
-    #apply_slide_style(ax)
+    from src.utils import apply_slide_style
+    apply_slide_style(ax)
 
     plt.tight_layout()
     plt.close(fig)
 
     return fig
+
+# plot number of loans and exposure grouped by variable
+
+def plot_distribution_by_category(ds, category, exposure_column):
+
+    # aggregate data
+
+    agg_df = ds.groupby(category).agg(
+        num_loans=(exposure_column, "count"),
+        total_amount=(exposure_column, "sum")
+    ).reset_index()
+
+    # figure
+
+    fig, ax1 = plt.subplots(figsize=(7, 6))
+
+    # bar width
+
+    x = np.arange(len(agg_df[category]))
+    width = 0.4
+
+    # plot number of loans
+
+    ax1.bar(
+        x - width/2,
+        agg_df["num_loans"],
+        width=width,
+        color="black",
+        label="Number of Loans"
+    )
+
+    ax1.set_ylabel("Number of Loans", color="black")
+    ax1.tick_params(axis="y", labelcolor="black")
+
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(
+        agg_df[category],
+        rotation=45,
+        ha="right"
+    )
+
+    # plot total loan amount
+
+    ax2 = ax1.twinx()
+
+    ax2.bar(
+        x + width/2,
+        agg_df["total_amount"],
+        width=width,
+        color="red",
+        label="Total Exposure Amount"
+    )
+
+    ax2.set_ylabel("Total Exposure Amount", color="red")
+    ax2.tick_params(axis="y", labelcolor="red")
+
+    # formating
+
+    ax1.yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, pos: f"{x:,.0f}"))
+    ax2.yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, pos: f"€{x / 1_000_000_000:.0f}b"))
+
+    # title
+
+    plt.title("Loans Distribution")
+
+    # combined legend - top middle
+
+    handles1, labels1 = ax1.get_legend_handles_labels()
+    handles2, labels2 = ax2.get_legend_handles_labels()
+
+    ax1.legend(
+        handles1 + handles2,
+        labels1 + labels2,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.0),
+        ncol=1
+    )
+
+    plt.tight_layout()
+    plt.show()
+
+# plot: PIE CHART
+
+def plot_pie_chart(ds, variable):
+
+    variable = variable
+    var      = ds[variable].dropna()
+
+    if   variable == "RemainingPaymentsRatio":
+
+        title  = "Distribution: Remaining Payments Ratio"
+        labels = ["Early life (>70%)", "Mid life (30–70%)", "Late life (<30%)"]
+
+        hi = (var > 0.7).sum()                   # HIGH
+        mi = ((var >= 0.3) & (var <= 0.7)).sum() # MID
+        lo = (var < 0.3).sum()                   # LOW
+        sizes  = [hi, mi, lo]
+        colors = ["red", "gray", "lightgray"]
+
+    elif variable == "ExposureLoanToValue":
+
+        title  = "Distribution: Exposure Loan To Value"
+        labels = ["High (>80%)", "Moderate (60–80%)", "Low (<60%)"]
+
+        hi = (var > 0.8).sum()                   # HIGH / VERY HIGH
+        mi = ((var >= 0.6) & (var <= 0.8)).sum() # MID
+        lo = (var < 0.6).sum()                   # LOW
+        sizes  = [hi, mi, lo]
+        colors = ["red", "darkgray", "lightgray"]
+
+    else: 
+
+        print("variable not implemented")
+
+    # --------------------------------------------------
+    # PIE CHART
+    # --------------------------------------------------
+
+    plt.figure(figsize=(3, 2))
+
+    wedges, texts, autotexts = plt.pie(
+        sizes,
+        labels=labels,
+        autopct=lambda p: f"{p:.1f}%" if p >= 3 else "",
+        startangle=90,
+        colors=colors
+    )
+
+    # Font sizes
+    plt.setp(texts, fontsize=8)       # category labels
+    plt.setp(autotexts, fontsize=8)   # percentages
+
+    # --------------------------------------------------
+    # TITLE / FORMATTING
+    # --------------------------------------------------
+
+    plt.title(title)
+    plt.axis("equal")  # makes it a circle
+    plt.show()

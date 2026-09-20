@@ -7,7 +7,7 @@ from IPython.display import display
 import shap
 from src.calibration import intercept_recalibration, PDCalibrator
 from src.metrics import my_metrics
-from src.modelling import apply_pipe
+from src.modelling import apply_pipe_PD
 from src.plots import my_calibration
 from src.utils import display_table
 
@@ -411,6 +411,24 @@ def aggregate_el_on_pd(df_with_el, el_column, bins):
 
     return table_EL
 
+# function: aggregate DR on years
+
+def aggregate_dr_on_years(ds, date_column, default_column):
+
+    # create loan year
+    ds["LoanYear"] = ds["DateOfObservation"].dt.year
+
+    # group by year and aggregate
+    dr_summary = ds.groupby("LoanYear").agg(
+        num_loans=("LoanYear", "count"),
+        num_defaults=("DefaultFlag", "sum")
+    ).reset_index()
+
+    # calculate default rate
+    dr_summary["default_rate"] = dr_summary["num_defaults"] / dr_summary["num_loans"]
+
+    return dr_summary
+
 # function: display EL table
 
 def display_el(table):
@@ -429,7 +447,7 @@ def display_el(table):
 
 # process: compare calibration windows
 
-def compare_calibration_windows(X_sample, y_sample, calibration_windows, pipeline):
+def compare_calibration_windows(X_sample, y_sample, calibration_windows, pipeline, show_cali_plots=True):
 
     results = {}
 
@@ -446,7 +464,7 @@ def compare_calibration_windows(X_sample, y_sample, calibration_windows, pipelin
         print("-" * 40)
         print(f"applying pipeline...")
 
-        predictions_cal   = apply_pipe(run_data["X"], pipeline)
+        predictions_cal   = apply_pipe_PD(run_data["X"], pipeline)
 
         print("-" * 40)
         print(f"training calibration...")
@@ -465,9 +483,10 @@ def compare_calibration_windows(X_sample, y_sample, calibration_windows, pipelin
         print("-" * 40)
         print(f"applying pipeline...")
 
-        predictions_sample = apply_pipe(X_sample, pipeline)
+        predictions_sample = apply_pipe_PD(X_sample, pipeline, calculate_el=True)
 
-        my_calibration(y_sample, predictions_sample["PD"], show_cal_table=False, plot_title="uncalibrated sample")
+        if show_cali_plots:
+            my_calibration(y_sample, predictions_sample["PD"], show_cal_table=False, plot_title="uncalibrated sample", bins = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
 
         metrics_before = my_metrics(
             y_true=y_sample,
@@ -502,7 +521,8 @@ def compare_calibration_windows(X_sample, y_sample, calibration_windows, pipelin
         print("AFTER CALIBRATION")
         print("-" * 40)
 
-        my_calibration(y_sample, predictions_sample["PD"], show_cal_table=False, plot_title="calibrated sample")
+        if show_cali_plots:
+            my_calibration(y_sample, predictions_sample["PD"], show_cal_table=False, plot_title="calibrated sample", bins = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
 
         metrics_after = my_metrics(
             y_true=y_sample,
