@@ -2,18 +2,19 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from IPython.display import display
+from . import settings
 
 # create target variable
 
 def create_target_def12(full_dataset):
 
     # first and last loan date
-    first_date = full_dataset.LoanDate.min()
-    last_date  = full_dataset.LoanDate.max()
+    first_date = full_dataset[settings.COLUMN_DATE].min()
+    last_date  = full_dataset[settings.COLUMN_DATE].max()
 
     # first and last default date
-    first_defdate = full_dataset.DefaultDate.min()
-    last_defdate  = full_dataset.DefaultDate.max()
+    first_defdate = full_dataset[settings.COLUMN_TARGET_DATE].min()
+    last_defdate  = full_dataset[settings.COLUMN_TARGET_DATE].max()
 
     # print
     print('LoanDate range:    ', first_date, last_date)
@@ -21,23 +22,23 @@ def create_target_def12(full_dataset):
     print('DefaultDate range: ', first_defdate, last_defdate)
 
     # default condition
-    full_dataset["default12"] = np.where(
+    full_dataset[settings.COLUMN_TARGET] = np.where(
         # define a 12-month window from LoanDate
         # check if DefaultDate is in
-        (full_dataset["DefaultDate"].notna()) & 
-        (full_dataset["DefaultDate"] <= full_dataset["LoanDate"] + pd.DateOffset(months=12)),
+        (full_dataset[settings.COLUMN_TARGET_DATE].notna()) & 
+        (full_dataset[settings.COLUMN_TARGET_DATE] <= full_dataset[settings.COLUMN_DATE] + pd.DateOffset(months=12)),
         1,  # default
         0   # no default within 12 months
     )
 
     # display DR by year
     # create LoanYear
-    full_dataset["LoanYear"] = full_dataset["LoanDate"].dt.year
+    full_dataset[settings.COLUMN_YEAR] = full_dataset[settings.COLUMN_DATE].dt.year
 
     # group by year and aggregate
-    DR_summary = full_dataset.groupby("LoanYear").agg(
-        num_loans=("LoanDate", "count"),
-        num_defaults=("default12", "sum")
+    DR_summary = full_dataset.groupby(settings.COLUMN_YEAR).agg(
+        num_loans=(settings.COLUMN_YEAR, "count"),
+        num_defaults=(settings.COLUMN_TARGET, "sum")
     ).reset_index()
 
     # calculate default rate
@@ -50,7 +51,7 @@ def create_target_def12(full_dataset):
 
 # handle missing values (conventionally)
 
-def handle_missing_values(X_trai, X_test, do_not_handle=[]):
+def handle_missing_values(X_trai, X_test, do_not_handle=[], verbose=False):
 
     # MISSING VALUES
 
@@ -65,14 +66,16 @@ def handle_missing_values(X_trai, X_test, do_not_handle=[]):
     # substitution values for numerical variables: median in training set
     median_vals = X_trai[num_cols].median()
 
-    print('SUBSTITUTION VALUES FOR NUMS: ')
-    print(median_vals)
+    if verbose:
+        print('SUBSTITUTION VALUES FOR NUMS: ')
+        print(median_vals)
 
     # substitution values for categorical variables: most common in training set
     common_vals = X_trai[cat_cols].mode().iloc[0]
 
-    print('SUBSTITUTION VALUES FOR CATS: ')
-    print(common_vals)
+    if verbose:
+        print('SUBSTITUTION VALUES FOR CATS: ')
+        print(common_vals)
 
     # replace NaNs in numerical variables
     X_trai[num_cols] = X_trai[num_cols].fillna(median_vals)

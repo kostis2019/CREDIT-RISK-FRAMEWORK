@@ -50,11 +50,11 @@ def apply_pipe_LGD(df, pipeline):
 
 # function: estimate EL 
 
-def estimate_el(df, column_lgd):
+def estimate_el(df, column_lgd="LGD", column_ead="Amount"):
 
     df = df.copy()
 
-    df["EL"]    = df["PD"] * df["Amount"] * df[column_lgd]
+    df["EL"]    = df["PD"] * df[column_ead] * df[column_lgd]
 
     return df
 

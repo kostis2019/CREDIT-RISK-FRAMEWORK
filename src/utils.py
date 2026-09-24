@@ -51,6 +51,41 @@ def display_table(df, decimals=3, hide_index=True):
 
     display(styler)
 
+# utility: format policy table
+
+def format_policy_table(df):
+
+    formatted = df.copy()
+
+    # 3 decimal places
+    for metric in ["AUC", "KS", "Brier"]:
+        if metric in formatted.index:
+            formatted.loc[metric] = formatted.loc[metric].map(
+                lambda x: f"{x:.3f}"
+            )
+
+    # Percentages
+    for metric in ["Observed_DR", "Mean_PD", "EL_Rate"]:
+        if metric in formatted.index:
+            formatted.loc[metric] = formatted.loc[metric].map(
+                lambda x: f"{x:.2%}"
+            )
+
+    # Whole numbers with thousands separator
+    for metric in [
+        "Exposure",
+        "EL_Total",
+        "Monte-Carlo Expected Loss",
+        "Monte-Carlo Economic Capital"
+    ]:
+        if metric in formatted.index:
+            formatted.loc[metric] = formatted.loc[metric].map(
+                lambda x: f"{x:,.0f}"
+            )
+
+    return formatted
+
+
 # utility: apply common plot style 
 
 def apply_slide_style(ax, ax_top=None):

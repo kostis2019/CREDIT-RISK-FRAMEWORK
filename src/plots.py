@@ -6,6 +6,7 @@ import matplotlib.ticker as mtick
 from IPython.display import display
 from src.preprocessing import my_input_load
 from src.utils import display_table
+from . import settings
 
 # plot: correlation
 
@@ -45,34 +46,34 @@ def show_correlation(ds, show_pairs_above=0.8):
 
 # plot: default rate per year
 
-def my_dr_plot(DR_summary, year_start, year_end):
+def my_dr_plot(DR_summary, year_start, year_end, xlabel=None):
 
     # ==============================
     # PLOT DR PER YEAR
     # ==============================
 
-    DR_summary = DR_summary[(DR_summary.LoanYear >= year_start) & (DR_summary.LoanYear <= year_end)]
+    DR_summary = DR_summary[(DR_summary[settings.COLUMN_YEAR] >= year_start) & (DR_summary[settings.COLUMN_YEAR] <= year_end)]
 
     fig, ax1 = plt.subplots(figsize=(5,4))
 
     # Bars: number of loans
     ax1.bar(
-        DR_summary["LoanYear"],
+        DR_summary[settings.COLUMN_YEAR],
         DR_summary["num_loans"],
         color="lightskyblue",
         alpha=0.3
     )
 
-    ax1.set_xlabel("Loan Origination Year")
+    ax1.set_xlabel(settings.LABEL_YEAR)
     ax1.set_ylabel("Number of Loans")
     ax1.grid(True, linestyle="--", linewidth=0.6, alpha=0.6)
     # only integer years
-    ax1.set_xticks(DR_summary["LoanYear"])
+    ax1.set_xticks(DR_summary[settings.COLUMN_YEAR])
 
     # Line: default rate
     ax2 = ax1.twinx()
     ax2.plot(
-        DR_summary["LoanYear"],
+        DR_summary[settings.COLUMN_YEAR],
         DR_summary["default_rate"],
         marker="o",
         markersize=8,
@@ -85,7 +86,7 @@ def my_dr_plot(DR_summary, year_start, year_end):
     ax2.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
 
     # annotate default rate
-    for x, y in zip(DR_summary["LoanYear"], DR_summary["default_rate"]):
+    for x, y in zip(DR_summary[settings.COLUMN_YEAR], DR_summary["default_rate"]):
         ax2.text(x+0.3, y, f"{y:.1%}", ha="center", fontsize=11)
 
     plt.tight_layout()
@@ -316,7 +317,7 @@ def default_capture_curve(y_true, models, show=True):
             "cum_default_rate": df["cum_default_rate"],
         }
 
-    # 📊 Plot
+    # Plot
 
     fig, ax = plt.subplots(figsize=(5, 4))
 
@@ -328,6 +329,11 @@ def default_capture_curve(y_true, models, show=True):
     "yellowgreen",
     "olivedrab",
     "darkolivegreen",
+    ]
+
+    colors = [
+    "#E879F9",
+    "#8B5CF6",    
     ]
 
     for (name, cums), color in zip(results.items(), colors):
@@ -1331,25 +1337,25 @@ def plot_pie_chart(ds, variable):
 
     if   variable == "RemainingPaymentsRatio":
 
-        title  = "Distribution: Remaining Payments Ratio"
+        title  = "Remaining Payments Ratio distribution"
         labels = ["Early life (>70%)", "Mid life (30–70%)", "Late life (<30%)"]
 
         hi = (var > 0.7).sum()                   # HIGH
         mi = ((var >= 0.3) & (var <= 0.7)).sum() # MID
         lo = (var < 0.3).sum()                   # LOW
         sizes  = [hi, mi, lo]
-        colors = ["red", "gray", "lightgray"]
+        colors = ["#8B5CF6", "#E879F9", "lightgray"]
 
     elif variable == "ExposureLoanToValue":
 
-        title  = "Distribution: Exposure Loan To Value"
+        title  = "Exposure LTV distribution"
         labels = ["High (>80%)", "Moderate (60–80%)", "Low (<60%)"]
 
         hi = (var > 0.8).sum()                   # HIGH / VERY HIGH
         mi = ((var >= 0.6) & (var <= 0.8)).sum() # MID
         lo = (var < 0.6).sum()                   # LOW
         sizes  = [hi, mi, lo]
-        colors = ["red", "darkgray", "lightgray"]
+        colors = ["#8B5CF6", "#E879F9", "lightgray"]
 
     else: 
 

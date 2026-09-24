@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from IPython.display import display
+from . import settings
 
 # load input file
 
@@ -31,9 +32,9 @@ def my_input_load(year_start, year_end, columns_to_use=None):
         # select country
         chunk = chunk[chunk["Country"] == "EE"]
         # create LoanYear
-        chunk["LoanYear"] = chunk["LoanDate"].dt.year
+        chunk[settings.COLUMN_YEAR] = chunk[settings.COLUMN_DATE].dt.year
         # select years
-        chunk = chunk[(chunk["LoanYear"] >= year_start) & (chunk["LoanYear"] <= year_end)]
+        chunk = chunk[(chunk[settings.COLUMN_YEAR] >= year_start) & (chunk[settings.COLUMN_YEAR] <= year_end)]
         # append
         chunks.append(chunk)
 
@@ -44,44 +45,10 @@ def my_input_load(year_start, year_end, columns_to_use=None):
 
 # split train/test/oot datasets
 
-def my_time_split_v0(full_dataset, train_yr_start, train_yr_end, test_yr_start, test_yr_end):
-
-    # train/test window
-    trai = full_dataset[(full_dataset["LoanYear"] >= train_yr_start) & (full_dataset["LoanYear"] <= train_yr_end)]
-    test = full_dataset[(full_dataset["LoanYear"] >= test_yr_start)  & (full_dataset["LoanYear"] <= test_yr_end)]
-
-    # features to NOT use
-    features_excl = ["default12","LoanDate","DefaultDate","LoanYear","Country",
-                        "CreditScoreEsMicroL","NrOfDependants",
-                        "LoanApplicationStartedDate","FirstPaymentDate"]
-
-    # features to use
-    all_features = [col for col in trai.columns if col not in features_excl]
-
-    # split
-    X_trai = trai[all_features]
-    y_trai = trai["default12"]
-    X_test = test[all_features]
-    y_test = test["default12"] 
-
-    # check shapes
-    print("Train size:", X_trai.shape, y_trai.shape)
-    print("Test size :", X_test.shape, y_test.shape)
-
-    # check counts
-    print(trai["LoanYear"].value_counts())
-    print(test["LoanYear"].value_counts())
-
-    # check DR
-    print("Train default rate:", y_trai.mean())
-    print("Test default rate :", y_test.mean())
-
-    return X_trai, y_trai, X_test, y_test
-
-def my_time_split(df, date_column, windows, target="default12", features_excl=None, verbose=True,):
+def my_time_split(df, date_column, windows, target=settings.COLUMN_TARGET, features_excl=None, verbose=True,):
 
         if features_excl is None:
-            features_excl = ["LoanDate","DefaultDate","LoanYear","Country","CreditScoreEsMicroL","NrOfDependants","LoanApplicationStartedDate","FirstPaymentDate"]
+            features_excl = []
 
         splits = {}
 
@@ -120,7 +87,7 @@ def my_time_split(df, date_column, windows, target="default12", features_excl=No
                 print(f"Years        : {split['years'][0]} - {split['years'][1]}")
                 print(f"Shape (X, y) : {split['X'].shape}, {split['y'].shape}")
 
-                print("\nLoanYear distribution")
+                print("\nYear distribution")
                 print(split["df"][date_column].value_counts().sort_index())
 
                 print(f"\nDefault rate : {split['y'].mean():.4f}")
