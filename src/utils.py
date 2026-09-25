@@ -85,7 +85,6 @@ def format_policy_table(df):
 
     return formatted
 
-
 # utility: apply common plot style 
 
 def apply_slide_style(ax, ax_top=None):

@@ -29,4 +29,4 @@ jobs:
 
     - name: Import src check
       run: |
-        python -c "from src.preprocessing import my_input_load, my_time_split, ReplaceMinusOne"
+        python -c "from src.preprocessing import input_load, time_split, ReplaceMinusOne"

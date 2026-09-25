@@ -6,7 +6,7 @@ from . import settings
 
 # create target variable
 
-def create_target_def12(full_dataset):
+def create_target_def12(full_dataset, verbose=False):
 
     # first and last loan date
     first_date = full_dataset[settings.COLUMN_DATE].min()
@@ -16,10 +16,11 @@ def create_target_def12(full_dataset):
     first_defdate = full_dataset[settings.COLUMN_TARGET_DATE].min()
     last_defdate  = full_dataset[settings.COLUMN_TARGET_DATE].max()
 
-    # print
-    print('LoanDate range:    ', first_date, last_date)
-    print('+12 months:        ', first_date + pd.DateOffset(months=12), last_date + pd.DateOffset(months=12))
-    print('DefaultDate range: ', first_defdate, last_defdate)
+    # optional print
+    if verbose:
+        print('LoanDate range:    ', first_date, last_date)
+        print('+12 months:        ', first_date + pd.DateOffset(months=12), last_date + pd.DateOffset(months=12))
+        print('DefaultDate range: ', first_defdate, last_defdate)
 
     # default condition
     full_dataset[settings.COLUMN_TARGET] = np.where(
@@ -45,7 +46,8 @@ def create_target_def12(full_dataset):
     DR_summary["default_rate"] = DR_summary["num_defaults"] / DR_summary["num_loans"]
 
     # display the table
-    display(DR_summary.style.hide(axis="index"))
+    if verbose:
+        display(DR_summary.style.hide(axis="index"))
 
     return full_dataset, DR_summary
 

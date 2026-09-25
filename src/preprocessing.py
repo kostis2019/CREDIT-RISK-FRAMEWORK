@@ -1,12 +1,11 @@
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
-from IPython.display import display
 from . import settings
 
 # load input file
 
-def my_input_load(year_start, year_end, columns_to_use=None):
+def input_load(year_start, year_end, columns_to_use=None):
 
     file_path = "../data/raw/LoanData_(DS_Home_Task).csv"
 
@@ -45,7 +44,7 @@ def my_input_load(year_start, year_end, columns_to_use=None):
 
 # split train/test/oot datasets
 
-def my_time_split(df, date_column, windows, target=settings.COLUMN_TARGET, features_excl=None, verbose=True,):
+def time_split(df, date_column, windows, target=settings.COLUMN_TARGET, features_excl=None, verbose=True,):
 
         if features_excl is None:
             features_excl = []

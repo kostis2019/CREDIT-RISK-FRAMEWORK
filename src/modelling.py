@@ -1,12 +1,9 @@
 import numpy as np
 import pandas as pd
-#from src.feature_engineering import create_target_def12
-from src.metrics import my_monte_carlo_metrics
-#from src.preprocessing import my_input_load
+from src.metrics import calculate_monte_carlo_metrics
 from src.plots import plot_loss_distribution
-#from src.utils import display_table
-from sklearn.linear_model import LinearRegression
-import xgboost
+from IPython.display import display
+from . import settings
 
 # function: apply PD pipeline 
 #           - calculate PD
@@ -20,14 +17,14 @@ def apply_pipe_PD(df, pipeline, calculate_el=False, sensitivity_lgd=False):
 
     if calculate_el:
         # calculate expected loss using realised LGD 
-        df["EL"]    = df["PD"] * df["Amount"] * df["LossGivenDefault"]
+        df["EL"]    = df["PD"] * df[settings.COLUMN_EAD] * df["LossGivenDefault"]
 
         if sensitivity_lgd:
             # calculate expected loss using LGD 10%, 15%, 25%, 90% 
-            df["EL_10"] = df["PD"] * df["Amount"] * 0.10
-            df["EL_15"] = df["PD"] * df["Amount"] * 0.15
-            df["EL_25"] = df["PD"] * df["Amount"] * 0.25
-            df["EL_90"] = df["PD"] * df["Amount"] * 0.90
+            df["EL_10"] = df["PD"] * df[settings.COLUMN_EAD] * 0.10
+            df["EL_15"] = df["PD"] * df[settings.COLUMN_EAD] * 0.15
+            df["EL_25"] = df["PD"] * df[settings.COLUMN_EAD] * 0.25
+            df["EL_90"] = df["PD"] * df[settings.COLUMN_EAD] * 0.90
 
     return df
 
@@ -50,7 +47,7 @@ def apply_pipe_LGD(df, pipeline):
 
 # function: estimate EL 
 
-def estimate_el(df, column_lgd="LGD", column_ead="Amount"):
+def estimate_el(df, column_lgd="LGD", column_ead=settings.COLUMN_EAD):
 
     df = df.copy()
 
@@ -61,6 +58,10 @@ def estimate_el(df, column_lgd="LGD", column_ead="Amount"):
 # function: fit LGD
 
 def fit_lgd(lgd_dataset, method, one_value=0.15, one_variable=None, verbose=False):
+
+    # import
+    from sklearn.linear_model import LinearRegression
+    import xgboost
 
     print("LGD estimation method:", method)
 
@@ -79,7 +80,8 @@ def fit_lgd(lgd_dataset, method, one_value=0.15, one_variable=None, verbose=Fals
 
     if method == "univariate":
 
-        print("Feature:", one_variable)
+        if verbose:
+            print("Feature:", one_variable)
 
         # EVALUATION DF
         df_eval = pd.DataFrame({
@@ -135,30 +137,32 @@ def fit_lgd(lgd_dataset, method, one_value=0.15, one_variable=None, verbose=Fals
     if method == "linear_regression":
 
         # model X
-        model_X = lgd_dataset.drop(columns=["LossGivenDefault", "num__default12"])
+        model_X = lgd_dataset.drop(columns=["LossGivenDefault", "num__default12"]) # REVIEW LATER!
         # model y
-        model_y = lgd_dataset["LossGivenDefault"]
+        model_y = lgd_dataset["LossGivenDefault"]                                  # REVIEW LATER!
         # model
         model = LinearRegression()
         # fit
         lgd_model = {"method": method, "model": model.fit(model_X, model_y)}
         # coefficients
         coef = pd.Series(model.coef_, index=model_X.columns).sort_values(key=abs, ascending=False)
-        print(coef)
+        if verbose:
+            print(coef)
 
     if method == "gradient_boosting_regression":
 
         # model X
-        model_X = lgd_dataset.drop(columns=["LossGivenDefault", "num__default12"])
+        model_X = lgd_dataset.drop(columns=["LossGivenDefault", "num__default12"]) # REVIEW LATER!
         # model y
-        model_y = lgd_dataset["LossGivenDefault"]
+        model_y = lgd_dataset["LossGivenDefault"]                                  # REVIEW LATER!
         # model
         model = xgboost.XGBRegressor()
         # fit
         lgd_model = {"method": method, "model": model.fit(model_X, model_y)}
         # importances
         impo = pd.Series(model.feature_importances_, index=model_X.columns).sort_values(ascending=False)
-        print(impo)
+        if verbose:
+            print(impo)
 
     return lgd_model
 
@@ -202,13 +206,13 @@ def transform_lgd(df, lgd_model):
 
     if method == "linear_regression":
 
-        model_X = df.drop(columns=["LossGivenDefault", "num__default12"], errors="ignore")
+        model_X = df.drop(columns=["LossGivenDefault", "num__default12"], errors="ignore") # REVIEW LATER!
         df["LGD"] = lgd_model["model"].predict(model_X)
         df["LGD"] = df["LGD"].clip(0, 1)
 
     if method == "gradient_boosting_regression":
 
-        model_X = df.drop(columns=["LossGivenDefault", "num__default12"], errors="ignore")
+        model_X = df.drop(columns=["LossGivenDefault", "num__default12"], errors="ignore") # REVIEW LATER!
         df["LGD"] = lgd_model["model"].predict(model_X)
         df["LGD"] = df["LGD"].clip(0, 1)
 
@@ -216,7 +220,7 @@ def transform_lgd(df, lgd_model):
 
 # function: estimate capital
 
-def estimate_capital(df, method, column_lgd, column_def="default12", column_ead="Amount", allocate= False, verbose=False, show_plot=True):
+def estimate_capital(df, method, column_lgd, column_def=settings.COLUMN_TARGET, column_ead=settings.COLUMN_EAD, allocate= False, verbose=False, show_plot=True):
 
     df = df.copy()
 
@@ -302,7 +306,7 @@ def estimate_capital(df, method, column_lgd, column_def="default12", column_ead=
 
         # Monte-Carlo: metrics
 
-        val_summary, loss_summary, el_summary = my_monte_carlo_metrics(df, 
+        val_summary, loss_summary, el_summary = calculate_monte_carlo_metrics(df, 
                                                                     sim_dr, 
                                                                     sim_losses, 
                                                                     sim_losses_indiv, 

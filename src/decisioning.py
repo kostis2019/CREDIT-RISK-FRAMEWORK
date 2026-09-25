@@ -1,15 +1,14 @@
-#from optparse import TitledHelpFormatter
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-#import matplotlib.ticker as mtick
 from IPython.display import display
 import shap
 from src.calibration import intercept_recalibration, PDCalibrator
-from src.metrics import my_metrics
+from src.metrics import calculate_metrics
 from src.modelling import apply_pipe_PD
-from src.plots import my_calibration
+from src.plots import plot_calibration
 from src.utils import display_table
+from . import settings
 
 # plot: pd threshold investigation and plot
 
@@ -165,7 +164,7 @@ def show_approval_vs_default_on_thresholds_l(y_true, pd_pred, pd_thresholds):
 
 # function: impact tables and plots
 
-def my_impact(y_true, pd_pred, pd_threshold=0.20):
+def show_impact(y_true, pd_pred, pd_threshold=0.20):
 
     ### ==== DATAFRAME ===
 
@@ -383,11 +382,6 @@ def aggregate_el_on_pd(df_with_el, el_column, bins):
     
     total_EL = df_with_el[el_column].sum()
 
-    print("-" * 50)
-    print('OVERALL STATS: ')
-    print(f"EL sum = {total_EL:,.0f}")
-    print("-" * 50)
-
     # evaluation data and bin
     df_eval = df_with_el[["PD", el_column]].copy()
     df_eval["prob_bin"] = pd.cut(df_eval["PD"], bins=bins)
@@ -405,23 +399,19 @@ def aggregate_el_on_pd(df_with_el, el_column, bins):
     # EL share
     table_EL["Share_EL"] = table_EL["Sum_EL"] / total_EL
 
-    # display EL table
-    display_table_EL = table_EL.T
-    display_el(display_table_EL)
-
     return table_EL
 
 # function: aggregate DR on years
 
-def aggregate_dr_on_years(ds, date_column, default_column):
+def aggregate_dr_on_years(ds, date_column=settings.COLUMN_DATE, default_column=settings.COLUMN_TARGET):
 
-    # create loan year
-    ds["LoanYear"] = ds["DateOfObservation"].dt.year
+    # create year
+    ds[settings.COLUMN_YEAR] = ds[date_column].dt.year
 
     # group by year and aggregate
-    dr_summary = ds.groupby("LoanYear").agg(
-        num_loans=("LoanYear", "count"),
-        num_defaults=("DefaultFlag", "sum")
+    dr_summary = ds.groupby(settings.COLUMN_YEAR).agg(
+        num_loans=(settings.COLUMN_YEAR, "count"),
+        num_defaults=(default_column, "sum")
     ).reset_index()
 
     # calculate default rate
@@ -486,9 +476,9 @@ def compare_calibration_windows(X_sample, y_sample, calibration_windows, pipelin
         predictions_sample = apply_pipe_PD(X_sample, pipeline, calculate_el=True)
 
         if show_cali_plots:
-            my_calibration(y_sample, predictions_sample["PD"], show_cal_table=False, plot_title="uncalibrated sample", bins = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+            plot_calibration(y_sample, predictions_sample["PD"], show_cal_table=False, plot_title="uncalibrated sample", bins = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
 
-        metrics_before = my_metrics(
+        metrics_before = calculate_metrics(
             y_true=y_sample,
             pd_pred=predictions_sample["PD"],
             exposure=predictions_sample["Amount"],
@@ -522,9 +512,9 @@ def compare_calibration_windows(X_sample, y_sample, calibration_windows, pipelin
         print("-" * 40)
 
         if show_cali_plots:
-            my_calibration(y_sample, predictions_sample["PD"], show_cal_table=False, plot_title="calibrated sample", bins = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+            plot_calibration(y_sample, predictions_sample["PD"], show_cal_table=False, plot_title="calibrated sample", bins = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
 
-        metrics_after = my_metrics(
+        metrics_after = calculate_metrics(
             y_true=y_sample,
             pd_pred=predictions_sample["PD"],
             exposure=predictions_sample["Amount"],
@@ -547,7 +537,7 @@ def compare_calibration_windows(X_sample, y_sample, calibration_windows, pipelin
 
 # process: estimate EL and CAP over different PD thresholds
 
-def estimate_capital_reduction(df, thresholds):
+def estimate_capital_reduction(df, thresholds, verbose=False):
 
     from src.modelling import estimate_capital
 
@@ -600,20 +590,21 @@ def estimate_capital_reduction(df, thresholds):
     results_display["EL Reduction"]       *= 1e2
     results_display["EC Reduction"]       *= 1e2
 
-    display(
-        results_display.style
-        .format({
-            "PD Threshold":       "{:.2f}",
-            "Approval Rate":      "{:.1%}",
-            "Portfolio EAD":      "{:.1f} M€",
-            "Expected Loss":      "{:.2f} M€",
-            "Expected Loss (MC)": "{:.2f} M€",
-            "Economic Capital":   "{:.0f} k€",
-            "EL Reduction":       "{:.0f} %",
-            "EC Reduction":       "{:.0f} %",        
-        })
-        .hide(axis="index")
-        )      
+    if verbose:
+        display(
+            results_display.style
+            .format({
+                "PD Threshold":       "{:.2f}",
+                "Approval Rate":      "{:.1%}",
+                "Portfolio EAD":      "{:.1f} M€",
+                "Expected Loss":      "{:.2f} M€",
+                "Expected Loss (MC)": "{:.2f} M€",
+                "Economic Capital":   "{:.0f} k€",
+                "EL Reduction":       "{:.0f} %",
+                "EC Reduction":       "{:.0f} %",        
+            })
+            .hide(axis="index")
+            )      
 
     return results
 

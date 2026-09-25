@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+from . import settings
 
 from sklearn.metrics import (
     roc_auc_score,
@@ -12,16 +14,18 @@ from sklearn.metrics import (
 # function: KS statistic
 
 def calculate_ks_statistic(y_true, y_pred_proba):
+
     # Calculate False Positive Rate (FPR) and True Positive Rate (TPR)
     fpr, tpr, thresholds = roc_curve(y_true, y_pred_proba)
     
     # The KS statistic is the maximum difference between TPR and FPR
     ks_statistic = max(tpr - fpr)
+
     return ks_statistic
 
 # function: my metrics
 
-def my_metrics(y_true, pd_pred, exposure=None, el=None, dataset_name="", verbose=True):
+def calculate_metrics(y_true, pd_pred, exposure=None, el=None, dataset_name="", verbose=True):
     
     # -------------------------
     # discrimination
@@ -89,7 +93,7 @@ def my_metrics(y_true, pd_pred, exposure=None, el=None, dataset_name="", verbose
 
 # function: my threshold metrics
 
-def my_threshold_metrics(y_true, pd_pred, threshold, exposure, el, dataset_name="", verbose=True):
+def calculate_threshold_metrics(y_true, pd_pred, threshold, exposure, el, dataset_name="", verbose=True):
 
         # Accepted Portfolio       
         accept_all   = pd_pred < 1.00
@@ -127,13 +131,50 @@ def my_threshold_metrics(y_true, pd_pred, threshold, exposure, el, dataset_name=
         accept_all_dr  = y_true[accept_all].mean()
         accept_thr_dr  = y_true[accept_thr].mean()
 
-        if verbose:
+        # -------------------------
+        # create result table
+        # -------------------------
+        threshold_metrics = pd.DataFrame({
+            "All": [
+                accept_all_rate,
+                accept_all_mean_pd,
+                accept_all_amt,
+                accept_all_mean_amt,
+                accept_all_el,
+                accept_all_el_rate,
+                accept_all_lgd,
+                accept_all_dr,
+            ],
+            "Threshold": [
+                accept_thr_rate,
+                accept_thr_mean_pd,
+                accept_thr_amt,
+                accept_thr_mean_amt,
+                accept_thr_el,
+                accept_thr_el_rate,
+                accept_thr_lgd,
+                accept_thr_dr,
+            ]
+            })
+        threshold_metrics.index = [
+            "Acceptance Rate",
+            "Mean PD",
+            "Exposure",
+            "Mean Exposure",
+            "EL",
+            "EL Rate",
+            "Implied LGD",
+            "Default Rate",
+        ]
 
+        # -------------------------
+        # optional print
+        # -------------------------
+        if verbose:
             print(f"\n{dataset_name}")
             print("-" * 62)
             print(f"{'Metric':<22}{'All':>18}{'Threshold':>18}")
             print("-" * 62)
-
             print(f"{'Acceptance Rate':<22}{accept_all_rate:>18.2%}{accept_thr_rate:>18.2%}")
             print(f"{'Mean PD':<22}{accept_all_mean_pd:>18.4f}{accept_thr_mean_pd:>18.4f}")
             print(f"{'Exposure':<22}{accept_all_amt:>18,.0f}{accept_thr_amt:>18,.0f}")
@@ -143,11 +184,11 @@ def my_threshold_metrics(y_true, pd_pred, threshold, exposure, el, dataset_name=
             print(f"{'Implied LGD':<22}{accept_all_lgd:>18.2%}{accept_thr_lgd:>18.2%}")
             print(f"{'Default Rate':<22}{accept_all_dr:>18.2%}{accept_thr_dr:>18.2%}")
 
-        return
+        return threshold_metrics
 
 # function: my regression metrics
 
-def my_regression_metrics(y_obs, y_pred, dataset_name="", verbose=True):
+def calculate_regression_metrics(y_obs, y_pred, dataset_name="", verbose=True):
     
     # -------------------------
     # MAE (mean absolute error)
@@ -197,14 +238,15 @@ def my_regression_metrics(y_obs, y_pred, dataset_name="", verbose=True):
 
 # function: my monte-carlo metrics
 
-def my_monte_carlo_metrics(df, sim_dr, sim_losses, sim_losses_indiv, n_simulations, el_total, column_def='default12', column_ead='Amount', verbose=True):
+def calculate_monte_carlo_metrics(df, sim_dr, sim_losses, sim_losses_indiv, n_simulations, el_total, column_def=settings.COLUMN_TARGET, column_ead=settings.COLUMN_EAD, verbose=True):
 
     #    sim_dr           : simulated DR
     #    sim_losses       : per simulation portfolio loss
     #    sim_losses_indiv : per simulation individual losses
 
-    # Monte-Carlo: validate
-
+    # -------------------------
+    # MONTE-CARLO: VALIDATION
+    # -------------------------    
     val_summary = {
         "DR (mean) observed"  : df[column_def].mean(),
         "PD (mean) predicted" : df['PD'].mean(),
@@ -213,8 +255,10 @@ def my_monte_carlo_metrics(df, sim_dr, sim_losses, sim_losses_indiv, n_simulatio
         "Nr simulations"      : n_simulations,
     }
 
+    # -------------------------
+    # optional print
+    # -------------------------
     if verbose:
-
         print(40*'-')
         print('Monte Carlo validation')
         print(40*'-')
@@ -225,8 +269,9 @@ def my_monte_carlo_metrics(df, sim_dr, sim_losses, sim_losses_indiv, n_simulatio
                 print(f"{key:<20}: {value:>12,.4f}")        
         print(40*'-')
 
-    # Monte-Carlo: summarize simulated losses
-
+    # -------------------------
+    # MONTE-CARLO: SIMULATED LOSSES SUMMARY
+    # -------------------------    
     loss_summary = {
         "EAD"        : df[column_ead].sum(),
         "Loss (min)" : sim_losses.min(),
@@ -239,6 +284,9 @@ def my_monte_carlo_metrics(df, sim_dr, sim_losses, sim_losses_indiv, n_simulatio
     }
     loss_summary["Economic Capital"] = (loss_summary["VaR 99.9%"] - loss_summary["Loss (mean)"])
 
+    # -------------------------
+    # optional print
+    # -------------------------
     if verbose:
 
         print(40*'-')
@@ -248,8 +296,9 @@ def my_monte_carlo_metrics(df, sim_dr, sim_losses, sim_losses_indiv, n_simulatio
             print(f"{key:<20}: {value:>12,.0f}")
         print(40*'-')
 
-    # Monte-Carlo: compare EL with simulated EL
-
+    # -------------------------
+    # MONTE-CARLO: compare EL with simulated EL
+    # -------------------------    
     el_summary = {
         "EL (deterministic)" : el_total,
         "EL (MC-simulated)"  : sim_losses.mean(),        
@@ -257,8 +306,10 @@ def my_monte_carlo_metrics(df, sim_dr, sim_losses, sim_losses_indiv, n_simulatio
     el_summary["Difference"] = (el_summary["EL (deterministic)"] - el_summary["EL (MC-simulated)"])
     el_summary["Difference (rel)"] = el_summary["Difference"]/el_summary["EL (deterministic)"]*100
 
+    # -------------------------
+    # optional print
+    # -------------------------
     if verbose:
-
         print(40*'-')
         print("Expected Loss comparison")
         print(40*'-')

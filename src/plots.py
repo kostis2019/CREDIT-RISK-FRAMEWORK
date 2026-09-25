@@ -4,13 +4,13 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 from IPython.display import display
-from src.preprocessing import my_input_load
+from src.preprocessing import input_load
 from src.utils import display_table
 from . import settings
 
 # plot: correlation
 
-def show_correlation(ds, show_pairs_above=0.8):
+def plot_correlation(ds, show_pairs_above=0.8):
 
     corr = ds.corr()
 
@@ -46,7 +46,7 @@ def show_correlation(ds, show_pairs_above=0.8):
 
 # plot: default rate per year
 
-def my_dr_plot(DR_summary, year_start, year_end, xlabel=None):
+def plot_dr(DR_summary, year_start, year_end, xlabel=None):
 
     # ==============================
     # PLOT DR PER YEAR
@@ -96,7 +96,7 @@ def my_dr_plot(DR_summary, year_start, year_end, xlabel=None):
 
 # plot: variable vs default rate
 
-def variable_vs_dr(variable, x_data, y_data):
+def plot_var_vs_dr(variable, x_data, y_data, verbose=False):
 
     # ==============================
     # PLOT VARIABLE VS DEFAULT RATE
@@ -112,7 +112,8 @@ def variable_vs_dr(variable, x_data, y_data):
     n_bins = 10
 
     # inspect values
-    print(df_plot[input_variable].describe())
+    if verbose:
+        print(df_plot[input_variable].describe())
 
     # -------- BINNING OPTIONS --------------
 
@@ -145,7 +146,8 @@ def variable_vs_dr(variable, x_data, y_data):
             default_rate=("default12", "mean")
         ).reset_index()
 
-    print(summary)
+    if verbose:
+        print(summary)
 
     # -------- PLOT --------
 
@@ -172,7 +174,7 @@ def variable_vs_dr(variable, x_data, y_data):
 
 # plot: calibration table and plot
 
-def my_calibration(y_true, pd_pred, dataset_name="", show_cal_table=False, plot_title="Calibration Plot", bins=None):
+def plot_calibration(y_true, pd_pred, dataset_name="", show_cal_table=False, plot_title="Calibration Plot", bins=None):
 
     # 1. risk table
 
@@ -284,7 +286,7 @@ def my_calibration(y_true, pd_pred, dataset_name="", show_cal_table=False, plot_
 
 # plot: default capture curve
 
-def default_capture_curve(y_true, models, show=True):
+def plot_default_capture_curve(y_true, models, show=True):
 
     results = {}
 
@@ -363,7 +365,7 @@ def default_capture_curve(y_true, models, show=True):
 
 # plot: EL concentration / PDbins
 
-def my_el_plot(table_EL, table_EL_x):
+def plot_el(table_EL, table_EL_x):
 
     # (bins)
     bins = [0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
@@ -425,7 +427,9 @@ def my_el_plot(table_EL, table_EL_x):
 
 # plot: EL heatmap on PD,LGD
 
-def my_el_heatmap(df):
+def plot_el_heatmap(df):
+
+    df = df.copy()
 
     ######## create 2D table for heatmap
 
@@ -442,9 +446,6 @@ def my_el_heatmap(df):
     # EL share
     df["EL_share"] = df["EL"] / total_EL
 
-    # look
-    #print(df.head())
-
     # 2D table
     heatmap_table = pd.pivot_table(
         df,
@@ -460,15 +461,12 @@ def my_el_heatmap(df):
         for interval in heatmap_table.columns
     ]
     heatmap_table.columns = pd_labels_1
-    # look
-    #print(heatmap_table)
 
     # choose PD labels 2/3?
     pd_labels_2 = [
         "low","medium-low","medium","medium-high","high"
     ]
     heatmap_table.columns = pd_labels_2
-    #print(heatmap_table)
     
     # choose PD labels 3/3?
     pd_labels_3 = [
@@ -546,7 +544,7 @@ def my_el_heatmap(df):
 
 # plot: comparison of various calibrations
 
-def my_calibration_comparison(y_true, pd_pred_raw, pd_pred_1, pd_pred_2, pd_pred_3):
+def plot_calibration_comparison(y_true, pd_pred_raw, pd_pred_1, pd_pred_2, pd_pred_3):
 
     # inputs: 
     #         y_true        observations
@@ -660,7 +658,7 @@ def my_calibration_comparison(y_true, pd_pred_raw, pd_pred_1, pd_pred_2, pd_pred
 
 # plot: observed vs predicted LGDs
 
-def pred_vs_obs_lgd(df_trai, df_test):
+def plot_pred_vs_obs_lgd(df_trai, df_test):
     """
     Scatter plot of predicted vs observed LGD for train and test datasets.
     """
@@ -702,7 +700,9 @@ def pred_vs_obs_lgd(df_trai, df_test):
 
 # plot: compare LGD distributions
 
-def compare_lgd_distributions(df):
+def plot_lgd_distribution_comparison(df):
+
+    df = df.copy()
 
     # use defaulted cases
     default_col = next((c for c in ["default12", "num__default12"] if c in df.columns), None)
@@ -792,7 +792,7 @@ def compare_lgd_distributions(df):
 
 # variable vs LGD
 
-def variable_vs_lgd(df, variable):
+def plot_var_vs_lgd(df, variable):
 
     # only defaults
     df = df.loc[df["default12"] == 1]
@@ -820,8 +820,8 @@ def variable_vs_lgd(df, variable):
 
 def explore_variable(variable, yr_start, yr_end, breaks=None):
 
-    tmp = my_input_load(yr_start, yr_end)
-    summary = tmp.groupby("LoanYear")[variable].describe()[["min", "mean", "max"]]
+    tmp = input_load(yr_start, yr_end)
+    summary = tmp.groupby(settings.COLUMN_YEAR)[variable].describe()[["min", "mean", "max"]]
 
     plt.figure(figsize=(9, 2))
 
@@ -847,7 +847,7 @@ def explore_variable(variable, yr_start, yr_end, breaks=None):
 
 # plot: EL,CAP heatmap on PD,LGD
 
-def my_heatmap(df, variable, column_lgd, show=True):
+def plot_heatmap(df, variable, column_lgd, show=True):
 
     print('selected variable: ', variable)
 
@@ -1327,6 +1327,8 @@ def plot_distribution_by_category(ds, category, exposure_column):
 
     plt.tight_layout()
     plt.show()
+
+    return fig
 
 # plot: PIE CHART
 

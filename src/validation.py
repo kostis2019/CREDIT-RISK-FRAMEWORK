@@ -1,4 +1,5 @@
 import pandas as pd
+from IPython.display import display
 
 # function: missing summary
 
@@ -17,17 +18,14 @@ def missing_summary(df):
 
 # function: validate model output
 
-def validate_predictions(df):
+def validate_predictions(df, verbose=True):
 
-    required = ["PD", "LGD"]   
+    required = ["PD", "LGD"]
+
     missing = [c for c in required if c not in df.columns]
 
     if missing:
         raise ValueError(f"Missing columns: {missing}")
-
-    print("-" * 40)
-    print("MODEL OUTPUT VALIDATION")
-    print("-" * 40)
 
     summary = pd.DataFrame({
         "PD": [
@@ -45,7 +43,13 @@ def validate_predictions(df):
     },
     index=["Min", "Mean", "Max", "NaNs"])
 
-    display(summary.round(3))
+    if verbose:
+        print("-" * 40)
+        print("MODEL OUTPUT VALIDATION")
+        print("-" * 40)
+        display(summary.round(3))
+
+    return summary
 
 # function: best model selector
 
