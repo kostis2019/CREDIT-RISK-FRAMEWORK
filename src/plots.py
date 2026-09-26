@@ -818,9 +818,9 @@ def plot_var_vs_lgd(df, variable):
 
 # variable min,mean,max across years
 
-def explore_variable(variable, yr_start, yr_end, breaks=None):
+def plot_variable_explore(ds, variable, breaks=None):
 
-    tmp = input_load(yr_start, yr_end)
+    tmp = ds
     summary = tmp.groupby(settings.COLUMN_YEAR)[variable].describe()[["min", "mean", "max"]]
 
     plt.figure(figsize=(9, 2))
@@ -840,7 +840,7 @@ def explore_variable(variable, yr_start, yr_end, breaks=None):
         plt.axvline(x, color="gray", linestyle="--", alpha=0.7)
 
     plt.ylabel(variable)
-    plt.xlabel("Loan Year")
+    plt.xlabel(settings.COLUMN_YEAR)
     plt.grid(alpha=0.3)
     plt.ylim([0,1])
     plt.legend()

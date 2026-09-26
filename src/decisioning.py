@@ -561,7 +561,7 @@ def estimate_capital_reduction(df, thresholds, verbose=False):
         df_approved = df[approved]
 
         print('running Monte-Carlo... ', 'PD threshold: ', t)
-        result_df, loss_sum, el_sum, fig = estimate_capital(df_approved, method="monte-carlo", column_lgd="LossGivenDefault", allocate=False, verbose=False, show_plot=False)
+        result_df, loss_sum, el_sum, _ = estimate_capital(df_approved, method="monte-carlo", column_lgd="LossGivenDefault", allocate=False, verbose=False)
 
         pd_thresholds.append(t)   
         approval_rates.append(approval_rate)     

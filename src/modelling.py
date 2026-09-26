@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from src.metrics import calculate_monte_carlo_metrics
-from src.plots import plot_loss_distribution
 from IPython.display import display
 from . import settings
 
@@ -220,7 +219,7 @@ def transform_lgd(df, lgd_model):
 
 # function: estimate capital
 
-def estimate_capital(df, method, column_lgd, column_def=settings.COLUMN_TARGET, column_ead=settings.COLUMN_EAD, allocate= False, verbose=False, show_plot=True):
+def estimate_capital(df, method, column_lgd, column_def=settings.COLUMN_TARGET, column_ead=settings.COLUMN_EAD, allocate= False, verbose=False):
 
     df = df.copy()
 
@@ -322,8 +321,7 @@ def estimate_capital(df, method, column_lgd, column_def=settings.COLUMN_TARGET, 
         mc_cap = loss_summary["Economic Capital"]
 
         # Monte-Carlo: loss distribution
-
-        fig = plot_loss_distribution(sim_losses, df[column_ead].sum(), show_plot=show_plot)
+        # removed 
 
         # Monte-Carlo: allocate 
 
@@ -370,4 +368,4 @@ def estimate_capital(df, method, column_lgd, column_def=settings.COLUMN_TARGET, 
 
     # end of estimation
 
-    return df, loss_summary, el_summary, fig
+    return df, loss_summary, el_summary, sim_losses
