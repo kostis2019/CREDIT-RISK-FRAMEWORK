@@ -29,4 +29,8 @@ jobs:
 
     - name: Import src check
       run: |
-        python -c "from src.preprocessing import input_load, time_split, ReplaceMinusOne"
+        python -c "from src.preprocessing import *"
+
+    - name: Run tests
+      run: |
+        python -m pytest

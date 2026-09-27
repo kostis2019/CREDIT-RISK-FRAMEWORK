@@ -106,3 +106,23 @@ def model_selector(experiment_metrics, metric="CORR"):
     )
 
     return selection_table, best_model
+
+# function: best calibration selector
+
+def calibration_selector(selection_table, metric="Brier"):
+    """
+    Select the best calibration based on chosen metric.
+    """
+
+    # select best calibration:
+    # smallest Brier
+    best_model = (
+        selection_table
+        .sort_values(
+            by=[f"{metric}"],
+            ascending=[True]
+        )
+        .head(1)
+    )
+
+    return selection_table, best_model

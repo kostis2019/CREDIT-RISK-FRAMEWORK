@@ -484,6 +484,7 @@ def compare_calibration_windows(X_sample, y_sample, calibration_windows, pipelin
             exposure=predictions_sample["Amount"],
             el=predictions_sample["EL"],
             dataset_name=f"OOT ({name})",
+            verbose=False,
         )
 
         ###################################################
@@ -520,6 +521,116 @@ def compare_calibration_windows(X_sample, y_sample, calibration_windows, pipelin
             exposure=predictions_sample["Amount"],
             el=predictions_sample["EL"],
             dataset_name=f"OOT ({name})",
+            verbose=False,
+        )
+
+        ###################################################
+        # save
+        ###################################################
+
+        results[name] = {
+            "delta": delta,
+            "predictions": predictions_sample.copy(),
+            "metrics_before": metrics_before,
+            "metrics_after": metrics_after,
+        }
+
+    return results
+
+# process: compare calibration methods
+
+def compare_calibration_methods(X_sample, y_sample, calibration_methods, pipeline, show_cali_plots=True):
+
+    results = {}
+
+    for name, run_data in calibration_methods.items():
+
+        print("=" * 70)
+        print(f"Run name: {name}")
+        print("=" * 70)
+
+        ###################################################
+        # calibration training sample
+        ###################################################
+
+        print("-" * 40)
+        print(f"applying pipeline...")
+
+        predictions_cal   = apply_pipe_PD(run_data["X"], pipeline)
+
+        print("-" * 40)
+        print(f"training calibration...")
+
+        # step needed only when "shift"
+        if run_data["method"] == "shift":
+            y_pred_cal, delta = intercept_recalibration(run_data["y"], predictions_cal["PD"])
+            print(f"Intercept shift (delta): {delta:.6f}")
+
+        ###################################################
+        # sample to apply (before calibration)
+        ###################################################
+
+        print("-" * 40)
+        print("BEFORE CALIBRATION")
+        print("-" * 40)
+    
+        print("-" * 40)
+        print(f"applying pipeline...")
+
+        predictions_sample = apply_pipe_PD(X_sample, pipeline, calculate_el=True)
+
+        if show_cali_plots:
+            plot_calibration(y_sample, predictions_sample["PD"], show_cal_table=False, plot_title="uncalibrated sample", bins = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+
+        metrics_before = calculate_metrics(
+            y_true=y_sample,
+            pd_pred=predictions_sample["PD"],
+            exposure=predictions_sample["Amount"],
+            el=predictions_sample["EL"],
+            dataset_name=f"OOT ({name})",
+            verbose=False,
+        )
+
+        ###################################################
+        # train calibration
+        ###################################################
+
+        if run_data["method"] == "shift":
+            calibrator = PDCalibrator(method="shift", shift=delta)
+        else:
+            calibrator = PDCalibrator(method=run_data["method"])
+            
+        # fit
+        calibrator.fit(predictions_cal, run_data["y"])
+
+        ###################################################
+        # calibrate sample
+        ###################################################
+
+        print("-" * 40)
+        print(f"calibrating sample...")
+
+        predictions_sample = calibrator.transform(predictions_sample)
+        predictions_sample["EL"] = (predictions_sample["PD"] * predictions_sample["Amount"] * predictions_sample["LossGivenDefault"])
+
+        ###################################################
+        # sample to apply (after calibration)
+        ###################################################
+
+        print("-" * 40)
+        print("AFTER CALIBRATION")
+        print("-" * 40)
+
+        if show_cali_plots:
+            plot_calibration(y_sample, predictions_sample["PD"], show_cal_table=False, plot_title="calibrated sample", bins = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+
+        metrics_after = calculate_metrics(
+            y_true=y_sample,
+            pd_pred=predictions_sample["PD"],
+            exposure=predictions_sample["Amount"],
+            el=predictions_sample["EL"],
+            dataset_name=f"OOT ({name})",
+            verbose=False,
         )
 
         ###################################################

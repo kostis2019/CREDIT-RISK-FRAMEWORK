@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from IPython.display import display
+import wandb
 
 # utility: clean table format
 
@@ -55,31 +56,43 @@ def format_policy_table(df):
 
     formatted = df.copy()
 
+    # Remove rows where all values are NaN
+    formatted = formatted.dropna(how="all")
+
     # 3 decimal places
     for metric in ["AUC", "KS", "Brier"]:
+
         if metric in formatted.index:
+
             formatted.loc[metric] = formatted.loc[metric].map(
-                lambda x: f"{x:.3f}"
+                lambda x: f"{x:.3f}" if pd.notna(x) else ""
             )
 
     # Percentages
     for metric in ["Observed_DR", "Mean_PD", "EL_Rate"]:
+
         if metric in formatted.index:
+
             formatted.loc[metric] = formatted.loc[metric].map(
-                lambda x: f"{x:.2%}"
+                lambda x: f"{x:.2%}" if pd.notna(x) else ""
             )
 
     # Whole numbers with thousands separator
     for metric in [
         "Exposure",
         "EL_Total",
-        "Monte-Carlo Expected Loss",
-        "Monte-Carlo Economic Capital"
+        "Expected Loss (Monte-Carlo)",
+        "Economic Capital (Monte-Carlo)"
     ]:
+
         if metric in formatted.index:
+
             formatted.loc[metric] = formatted.loc[metric].map(
-                lambda x: f"{x:,.0f}"
+                lambda x: f"{x:,.0f}" if pd.notna(x) else ""
             )
+
+    # Left-align the index
+    formatted.index.name = None
 
     return formatted
 
@@ -96,3 +109,33 @@ def apply_slide_style(ax, ax_top=None):
     if ax_top is not None:
         ax_top.tick_params(axis="x", labelsize=11)
         ax_top.xaxis.label.set_size(12)
+
+# utility: log experiment to W&B
+
+def log_to_wandb(
+    metrics,
+    calibration,
+    window,
+    cal_plot,
+    dataset="OOT"
+):
+    import wandb
+
+    wandb.login()
+
+    wandb.init(
+        project="my-credit-risk-model",
+        name="CALIBRATION WINDOW",
+        config={
+            "dataset": dataset,
+            "calibration": calibration,
+            "window": window
+        }
+    )
+
+    wandb.log(metrics)
+    wandb.log({
+        "Calibration Plot": wandb.Image(cal_plot)
+    })
+
+    wandb.finish()

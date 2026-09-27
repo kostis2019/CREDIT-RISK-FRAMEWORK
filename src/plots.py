@@ -544,7 +544,7 @@ def plot_el_heatmap(df):
 
 # plot: comparison of various calibrations
 
-def plot_calibration_comparison(y_true, pd_pred_raw, pd_pred_1, pd_pred_2, pd_pred_3):
+def plot_calibration_comparison(y_true, pd_pred_raw, pd_pred_1, pd_pred_2, pd_pred_3, label_1='1', label_2='2', label_3='3', title="Recalibration:"):
 
     # inputs: 
     #         y_true        observations
@@ -623,9 +623,9 @@ def plot_calibration_comparison(y_true, pd_pred_raw, pd_pred_1, pd_pred_2, pd_pr
     fig, ax = plt.subplots(figsize=(6,5)) 
 
     # Calibration lines:
-    ax.plot(bin_centers, table["Avg_PD_1"],              color="#E9C46A", marker='o', label="1 recent year ", linewidth=2.0, markersize=5)
-    ax.plot(bin_centers, table["Avg_PD_2"],              color="#FA8072", marker='s', label="2 recent years", linewidth=2.0, markersize=5)
-    ax.plot(bin_centers, table["Avg_PD_3"],              color="#D1495B", marker='D', label="5 recent years", linewidth=2.0, markersize=5)
+    ax.plot(bin_centers, table["Avg_PD_1"],              color="#E9C46A", marker='o', label=label_1, linewidth=2.0, markersize=5)
+    ax.plot(bin_centers, table["Avg_PD_2"],              color="#FA8072", marker='s', label=label_2, linewidth=2.0, markersize=5)
+    ax.plot(bin_centers, table["Avg_PD_3"],              color="#D1495B", marker='D', label=label_3, linewidth=2.0, markersize=5)
     ax.plot(bin_centers, table["Observed_Default_Rate"], color='black'  , marker='X', label="Observed DR   ", linewidth=3.5, markersize=8)
     #ax.plot([0,1],[0,1],'--',                            color='gray'               , label="Perfect Calibration")
 
@@ -634,7 +634,7 @@ def plot_calibration_comparison(y_true, pd_pred_raw, pd_pred_1, pd_pred_2, pd_pr
 
     ax.set_xlabel("PD Bin")
     ax.set_ylabel("Predicted / Observed Default Rate")
-    ax.set_title("Recalibration: Short vs Long Historical Windows")
+    ax.set_title(title)
     ax.legend()
     # -> set ticks to bin edges:
     #ax.set_xticks(bins)
