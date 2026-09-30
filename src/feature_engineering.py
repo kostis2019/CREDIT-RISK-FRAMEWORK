@@ -89,6 +89,78 @@ def handle_missing_values(X_trai, X_test, do_not_handle=[], verbose=False):
 
     return X_trai, X_test
 
+# handle special mapping (conventionally) [dataset specific]
+
+def handle_special_mapping(X_trai, X_test, verbose=True):
+
+    # EmploymentDurationCurrentEmployer
+    var = "EmploymentDurationCurrentEmployer"
+
+    mapping = {
+        "TrialPeriod": 0,
+        "UpTo1Year": 1,
+        "UpTo2Years": 2,
+        "UpTo3Years": 3,
+        "UpTo4Years": 4,
+        "UpTo5Years": 5,
+        "MoreThan5Years": 6,
+        "Retiree": 7,
+        "Other": np.nan
+    }
+
+    if verbose:
+        print(f"\n{var} - before mapping:")
+        print(X_trai[var].value_counts(dropna=False))
+
+    X_trai[var] = X_trai[var].map(mapping)
+    X_test[var] = X_test[var].map(mapping)
+
+    if verbose:
+        print(f"\n{var} - after mapping:")
+        print(X_trai[var].value_counts(dropna=False))
+
+
+    # WorkExperience
+    var = "WorkExperience"
+
+    mapping = {
+        "LessThan2Years": 0,
+        "2To5Years": 2,
+        "5To10Years": 5,
+        "10To15Years": 10,
+        "15To25Years": 15,
+        "MoreThan25Years": 25
+    }
+
+    if verbose:
+        print(f"\n{var} - before mapping:")
+        print(X_trai[var].value_counts(dropna=False))
+
+    X_trai[var] = X_trai[var].map(mapping)
+    X_test[var] = X_test[var].map(mapping)
+
+    if verbose:
+        print(f"\n{var} - after mapping:")
+        print(X_trai[var].value_counts(dropna=False))
+
+
+    # NewCreditCustomer
+    var = "NewCreditCustomer"
+
+    if verbose:
+        print(f"\n{var} - before mapping:")
+        print(X_trai[var].value_counts(dropna=False))
+
+    X_trai[var] = X_trai[var].astype("int64")
+    X_test[var] = X_test[var].astype("int64")
+
+    if verbose:
+        print(f"\n{var} - after mapping:")
+        print(X_trai[var].value_counts(dropna=False))
+
+
+    return X_trai, X_test
+
 # map special features
 
 class SpecialMappings(BaseEstimator, TransformerMixin):

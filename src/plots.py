@@ -3,8 +3,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
+from matplotlib.ticker import FormatStrFormatter
 from IPython.display import display
-from src.preprocessing import input_load
 from src.utils import display_table
 from . import settings
 
@@ -1388,3 +1388,47 @@ def plot_pie_chart(ds, variable):
     plt.title(title)
     plt.axis("equal")  # makes it a circle
     plt.show()
+
+# plot drift
+
+def plot_drift(drift_results, variable):
+
+    data = drift_results[
+        drift_results["Variable"] == variable
+    ].copy()
+
+    fig, ax = plt.subplots(figsize=(7, 2))
+
+    ax.plot(
+        data["Comparison"],
+        data["PSI"],
+        marker="o",
+        color='black'
+    )
+
+    # Annotate the reference point
+    reference = data.iloc[0]
+
+    ax.annotate(
+        "Reference",
+        xy=(reference["Comparison"], reference["PSI"]),
+        xytext=(4, 11),
+        textcoords="offset points",
+        ha="center",
+        fontsize=8,
+    )
+
+    ax.set_title(f"Population Drift — {variable}")
+    ax.set_xlabel("Period")
+    ax.set_ylabel("PSI")
+
+    # limit
+    max_psi = max(data["PSI"])
+    ax.set_ylim(0, max_psi * 1.1)
+
+    # format
+    ax.yaxis.set_major_formatter(FormatStrFormatter("%.2f"))
+
+    plt.tight_layout()
+
+    return fig

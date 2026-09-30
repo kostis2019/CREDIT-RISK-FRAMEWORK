@@ -62,7 +62,7 @@ def create_risk_report(overview,
     output_dir = Path(output_path)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    pdf_path = output_dir / "First_Report.pdf"
+    pdf_path = output_dir / "Test_Report.pdf"
 
     # 16:9 landscape page
     PAGE_SIZE = (13.333 * inch, 7.5 * inch)
