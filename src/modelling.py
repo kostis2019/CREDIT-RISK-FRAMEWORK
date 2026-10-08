@@ -2,28 +2,49 @@ import numpy as np
 import pandas as pd
 from src.metrics import calculate_monte_carlo_metrics
 from IPython.display import display
-from . import settings
+
+# function: select n features using gb importance
+
+def select_features_gb(y_trai, X_trai, n):
+
+    # import
+    import xgboost
+
+    # initial model gb:
+    model_gb = xgboost.XGBClassifier(random_state=888, max_depth=2, learning_rate=0.05)
+    model_gb.fit(X_trai, y_trai)
+
+    # feature importance
+    importance = pd.Series(model_gb.feature_importances_, index=X_trai.columns)
+    # sort
+    feature_importance = importance.sort_values(ascending=False)
+    # take first n
+    feature_importance = feature_importance.head(n)
+    # save names to list
+    selected_features = feature_importance.index.tolist()
+
+    return selected_features, feature_importance
 
 # function: apply PD pipeline 
 #           - calculate PD
 #           - calculate EL       (optional)
 #           - sensitivity on LGD (optional)
 
-def apply_pipe_PD(df, pipeline, calculate_el=False, sensitivity_lgd=False):
+def apply_pipe_PD(df, pipeline, column_lgd=[], column_ead=[], calculate_el=False, sensitivity_lgd=False):
 
     df = df.copy()
     df["PD"]    = pipeline.predict_proba(df)[:,1]
 
     if calculate_el:
         # calculate expected loss using realised LGD 
-        df["EL"]    = df["PD"] * df[settings.COLUMN_EAD] * df["LossGivenDefault"]
+        df["EL"]    = df["PD"] * df[column_ead] * df[column_lgd]
 
         if sensitivity_lgd:
             # calculate expected loss using LGD 10%, 15%, 25%, 90% 
-            df["EL_10"] = df["PD"] * df[settings.COLUMN_EAD] * 0.10
-            df["EL_15"] = df["PD"] * df[settings.COLUMN_EAD] * 0.15
-            df["EL_25"] = df["PD"] * df[settings.COLUMN_EAD] * 0.25
-            df["EL_90"] = df["PD"] * df[settings.COLUMN_EAD] * 0.90
+            df["EL_10"] = df["PD"] * df[column_ead] * 0.10
+            df["EL_15"] = df["PD"] * df[column_ead] * 0.15
+            df["EL_25"] = df["PD"] * df[column_ead] * 0.25
+            df["EL_90"] = df["PD"] * df[column_ead] * 0.90
 
     return df
 
@@ -46,7 +67,7 @@ def apply_pipe_LGD(df, pipeline):
 
 # function: estimate EL 
 
-def estimate_el(df, column_lgd="LGD", column_ead=settings.COLUMN_EAD):
+def estimate_el(df, column_lgd, column_ead):
 
     df = df.copy()
 
@@ -219,7 +240,7 @@ def transform_lgd(df, lgd_model):
 
 # function: estimate capital
 
-def estimate_capital(df, method, column_lgd, column_def=settings.COLUMN_TARGET, column_ead=settings.COLUMN_EAD, allocate= False, verbose=False):
+def estimate_capital(df, method, column_lgd, column_def, column_ead, allocate= False, verbose=False):
 
     df = df.copy()
 

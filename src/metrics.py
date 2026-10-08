@@ -1,7 +1,5 @@
 import numpy as np
 import pandas as pd
-from . import settings
-
 from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
@@ -238,7 +236,7 @@ def calculate_regression_metrics(y_obs, y_pred, dataset_name="", verbose=True):
 
 # function: my monte-carlo metrics
 
-def calculate_monte_carlo_metrics(df, sim_dr, sim_losses, sim_losses_indiv, n_simulations, el_total, column_def=settings.COLUMN_TARGET, column_ead=settings.COLUMN_EAD, verbose=True):
+def calculate_monte_carlo_metrics(df, sim_dr, sim_losses, sim_losses_indiv, n_simulations, el_total, column_def, column_ead, verbose=True):
 
     #    sim_dr           : simulated DR
     #    sim_losses       : per simulation portfolio loss

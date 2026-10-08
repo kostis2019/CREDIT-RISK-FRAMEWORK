@@ -139,3 +139,20 @@ def log_to_wandb(
     })
 
     wandb.finish()
+
+# utility: preview pdf in notebook
+
+def preview_pdf(pdf_path):
+
+    import pymupdf
+    from IPython.display import display
+    from PIL import Image
+    import io
+
+    pdf_path = pdf_path
+    pdf = pymupdf.open(str(pdf_path))
+
+    for page in pdf:
+        pix = page.get_pixmap(matrix=pymupdf.Matrix(1.5, 1.5))
+        img = Image.open(io.BytesIO(pix.tobytes("png")))
+        display(img)

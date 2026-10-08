@@ -6,7 +6,6 @@ import matplotlib.ticker as mtick
 from matplotlib.ticker import FormatStrFormatter
 from IPython.display import display
 from src.utils import display_table
-from . import settings
 
 # plot: correlation
 
@@ -46,34 +45,34 @@ def plot_correlation(ds, show_pairs_above=0.8):
 
 # plot: default rate per year
 
-def plot_dr(DR_summary, year_start, year_end, xlabel=None):
+def plot_dr(DR_summary, year_start, year_end, column_year, xlabel="Year"):
 
     # ==============================
     # PLOT DR PER YEAR
     # ==============================
 
-    DR_summary = DR_summary[(DR_summary[settings.COLUMN_YEAR] >= year_start) & (DR_summary[settings.COLUMN_YEAR] <= year_end)]
+    DR_summary = DR_summary[(DR_summary[column_year] >= year_start) & (DR_summary[column_year] <= year_end)]
 
     fig, ax1 = plt.subplots(figsize=(5,4))
 
     # Bars: number of loans
     ax1.bar(
-        DR_summary[settings.COLUMN_YEAR],
+        DR_summary[column_year],
         DR_summary["num_loans"],
         color="lightskyblue",
         alpha=0.3
     )
 
-    ax1.set_xlabel(settings.LABEL_YEAR)
+    ax1.set_xlabel(xlabel)
     ax1.set_ylabel("Number of Loans")
     ax1.grid(True, linestyle="--", linewidth=0.6, alpha=0.6)
     # only integer years
-    ax1.set_xticks(DR_summary[settings.COLUMN_YEAR])
+    ax1.set_xticks(DR_summary[column_year])
 
     # Line: default rate
     ax2 = ax1.twinx()
     ax2.plot(
-        DR_summary[settings.COLUMN_YEAR],
+        DR_summary[column_year],
         DR_summary["default_rate"],
         marker="o",
         markersize=8,
@@ -86,7 +85,7 @@ def plot_dr(DR_summary, year_start, year_end, xlabel=None):
     ax2.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
 
     # annotate default rate
-    for x, y in zip(DR_summary[settings.COLUMN_YEAR], DR_summary["default_rate"]):
+    for x, y in zip(DR_summary[column_year], DR_summary["default_rate"]):
         ax2.text(x+0.3, y, f"{y:.1%}", ha="center", fontsize=11)
 
     plt.tight_layout()
@@ -818,10 +817,10 @@ def plot_var_vs_lgd(df, variable):
 
 # variable min,mean,max across years
 
-def plot_variable_explore(ds, variable, breaks=None):
+def plot_variable_explore(ds, variable, column_year, breaks=[]):
 
     tmp = ds
-    summary = tmp.groupby(settings.COLUMN_YEAR)[variable].describe()[["min", "mean", "max"]]
+    summary = tmp.groupby(column_year)[variable].describe()[["min", "mean", "max"]]
 
     plt.figure(figsize=(9, 2))
 
@@ -840,7 +839,7 @@ def plot_variable_explore(ds, variable, breaks=None):
         plt.axvline(x, color="gray", linestyle="--", alpha=0.7)
 
     plt.ylabel(variable)
-    plt.xlabel(settings.COLUMN_YEAR)
+    plt.xlabel(column_year)
     plt.grid(alpha=0.3)
     plt.ylim([0,1])
     plt.legend()

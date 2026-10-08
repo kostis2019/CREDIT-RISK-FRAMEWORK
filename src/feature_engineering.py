@@ -2,19 +2,24 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from IPython.display import display
-from . import settings
 
 # create target variable
 
-def create_target_def12(full_dataset, verbose=False):
+def create_target_def12(full_dataset, 
+                        column_date,
+                        column_year,
+                        column_target_date,
+                        column_target, 
+                        verbose=False,
+                        ):
 
     # first and last loan date
-    first_date = full_dataset[settings.COLUMN_DATE].min()
-    last_date  = full_dataset[settings.COLUMN_DATE].max()
+    first_date = full_dataset[column_date].min()
+    last_date  = full_dataset[column_date].max()
 
     # first and last default date
-    first_defdate = full_dataset[settings.COLUMN_TARGET_DATE].min()
-    last_defdate  = full_dataset[settings.COLUMN_TARGET_DATE].max()
+    first_defdate = full_dataset[column_target_date].min()
+    last_defdate  = full_dataset[column_target_date].max()
 
     # optional print
     if verbose:
@@ -23,23 +28,23 @@ def create_target_def12(full_dataset, verbose=False):
         print('DefaultDate range: ', first_defdate, last_defdate)
 
     # default condition
-    full_dataset[settings.COLUMN_TARGET] = np.where(
+    full_dataset[column_target] = np.where(
         # define a 12-month window from LoanDate
         # check if DefaultDate is in
-        (full_dataset[settings.COLUMN_TARGET_DATE].notna()) & 
-        (full_dataset[settings.COLUMN_TARGET_DATE] <= full_dataset[settings.COLUMN_DATE] + pd.DateOffset(months=12)),
+        (full_dataset[column_target_date].notna()) & 
+        (full_dataset[column_target_date] <= full_dataset[column_date] + pd.DateOffset(months=12)),
         1,  # default
         0   # no default within 12 months
     )
 
     # display DR by year
     # create LoanYear
-    full_dataset[settings.COLUMN_YEAR] = full_dataset[settings.COLUMN_DATE].dt.year
+    full_dataset[column_year] = full_dataset[column_date].dt.year
 
     # group by year and aggregate
-    DR_summary = full_dataset.groupby(settings.COLUMN_YEAR).agg(
-        num_loans=(settings.COLUMN_YEAR, "count"),
-        num_defaults=(settings.COLUMN_TARGET, "sum")
+    DR_summary = full_dataset.groupby(column_year).agg(
+        num_loans=(column_year, "count"),
+        num_defaults=(column_target, "sum")
     ).reset_index()
 
     # calculate default rate
@@ -161,7 +166,77 @@ def handle_special_mapping(X_trai, X_test, verbose=True):
 
     return X_trai, X_test
 
-# map special features
+# map special features: unsecured loans dataset
+
+class SpecialMappingsUnsecured(BaseEstimator, TransformerMixin):
+
+    def __init__(self, verbose=False):
+
+        self.verbose = verbose
+
+    # define all mappings here
+    
+        self.mappings = {
+            
+            "EmploymentDurationCurrentEmployer": {
+                "TrialPeriod": 0,
+                "UpTo1Year": 1,
+                "UpTo2Years": 2,
+                "UpTo3Years": 3,
+                "UpTo4Years": 4,
+                "UpTo5Years": 5,
+                "MoreThan5Years": 6,
+                "Retiree": 7,
+                "Other": np.nan
+            },
+
+            "WorkExperience": {
+                "LessThan2Years": 0,
+                "2To5Years": 2,
+                "5To10Years": 5,
+                "10To15Years": 10,
+                "15To25Years": 15,
+                "MoreThan25Years": 25,
+                "Other": np.nan
+            },
+
+            # "NewCreditCustomer": {
+            #     "True": 1,
+            #     "False": 0,
+            #     "Other": np.nan
+            # }
+
+            # 👉 add more variables here
+            # "AnotherVariable": {
+            #     "A": 1,
+            #     "B": 2,
+            #     "C": np.nan
+            # }
+        }
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X = X.copy()
+
+        for col, mapping in self.mappings.items():
+            if col in X.columns:
+
+                if self.verbose:
+                    print("- Before mapping: ")
+                    print(X[col].value_counts(dropna=False))
+
+                X[col] = X[col].map(mapping)
+                X[col] = X[col].astype("Int64")
+
+                if self.verbose:
+                    print("- After mapping: ")
+                    print(X[col].value_counts(dropna=False))
+
+        return X
+
+# map special features: unsecured loans dataset
 
 class SpecialMappings(BaseEstimator, TransformerMixin):
 

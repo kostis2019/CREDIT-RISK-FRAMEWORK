@@ -1,12 +1,6 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import ks_2samp
-from . import settings
-
-import numpy as np
-import pandas as pd
-from scipy.stats import ks_2samp
-
 
 def _calculate_numeric_drift(
     reference_values,
@@ -87,7 +81,6 @@ def _calculate_numeric_drift(
 
     return ks_statistic, p_value, psi
 
-
 def _calculate_categorical_drift(
     reference_values,
     comparison_values,
@@ -141,7 +134,6 @@ def _calculate_categorical_drift(
     ).sum()
 
     return psi
-
 
 def calculate_drift(
     df,

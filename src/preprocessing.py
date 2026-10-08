@@ -1,11 +1,10 @@
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
-from . import settings
 
 # load input file
 
-def input_load(year_start, year_end, columns_to_use=None):
+def input_load(year_start, year_end, column_date, column_year, columns_to_use=None):
 
     file_path = "../data/raw/LoanData_(DS_Home_Task).csv"
 
@@ -31,9 +30,9 @@ def input_load(year_start, year_end, columns_to_use=None):
         # select country
         chunk = chunk[chunk["Country"] == "EE"]
         # create LoanYear
-        chunk[settings.COLUMN_YEAR] = chunk[settings.COLUMN_DATE].dt.year
+        chunk[column_year] = chunk[column_date].dt.year
         # select years
-        chunk = chunk[(chunk[settings.COLUMN_YEAR] >= year_start) & (chunk[settings.COLUMN_YEAR] <= year_end)]
+        chunk = chunk[(chunk[column_year] >= year_start) & (chunk[column_year] <= year_end)]
         # append
         chunks.append(chunk)
 
@@ -44,7 +43,7 @@ def input_load(year_start, year_end, columns_to_use=None):
 
 # split train/test/oot datasets
 
-def time_split(df, date_column, windows, target=settings.COLUMN_TARGET, features_excl=None, verbose=True,):
+def time_split(df, date_column, windows, target, features_excl=None, verbose=True,):
 
         if features_excl is None:
             features_excl = []
@@ -53,7 +52,7 @@ def time_split(df, date_column, windows, target=settings.COLUMN_TARGET, features
 
         feature_cols = [
             c for c in df.columns
-            if c not in features_excl + [target]
+            if c not in features_excl + [target] + [date_column]
         ]
 
         for name, (start_year, end_year) in windows.items():

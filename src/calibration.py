@@ -1,8 +1,8 @@
 import numpy as np
-from sklearn.base import BaseEstimator, ClassifierMixin, clone #FlexibleCalibratedModel
-from sklearn.calibration import CalibratedClassifierCV         #FlexibleCalibratedModel
-from sklearn.linear_model import LogisticRegression            #PDCalibrator
-from sklearn.isotonic import IsotonicRegression                #PDCalibrator
+from sklearn.base import BaseEstimator, ClassifierMixin, clone # used by FlexibleCalibratedModel
+from sklearn.calibration import CalibratedClassifierCV         # used by FlexibleCalibratedModel
+from sklearn.linear_model import LogisticRegression            # used by PDCalibrator
+from sklearn.isotonic import IsotonicRegression                # used by PDCalibrator
 
 # function: intercept recalibration
 

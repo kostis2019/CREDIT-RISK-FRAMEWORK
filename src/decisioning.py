@@ -1,14 +1,13 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from IPython.display import display
 import shap
+from IPython.display import display
 from src.calibration import intercept_recalibration, PDCalibrator
 from src.metrics import calculate_metrics
 from src.modelling import apply_pipe_PD
 from src.plots import plot_calibration
 from src.utils import display_table
-from . import settings
 
 # plot: pd threshold investigation and plot
 
@@ -403,15 +402,15 @@ def aggregate_el_on_pd(df_with_el, el_column, bins):
 
 # function: aggregate DR on years
 
-def aggregate_dr_on_years(ds, date_column=settings.COLUMN_DATE, default_column=settings.COLUMN_TARGET):
+def aggregate_dr_on_years(ds, date_column, default_column, year_column="Year"):
 
     # create year
-    ds[settings.COLUMN_YEAR] = ds[date_column].dt.year
+    ds[year_column] = ds[date_column].dt.year
 
     # group by year and aggregate
-    dr_summary = ds.groupby(settings.COLUMN_YEAR).agg(
-        num_loans=(settings.COLUMN_YEAR, "count"),
-        num_defaults=(default_column, "sum")
+    dr_summary = ds.groupby(year_column).agg(
+        num_loans    = (year_column   , "count"),
+        num_defaults = (default_column, "sum")
     ).reset_index()
 
     # calculate default rate
@@ -473,7 +472,7 @@ def compare_calibration_windows(X_sample, y_sample, calibration_windows, pipelin
         print("-" * 40)
         print(f"applying pipeline...")
 
-        predictions_sample = apply_pipe_PD(X_sample, pipeline, calculate_el=True)
+        predictions_sample = apply_pipe_PD(X_sample, pipeline, column_lgd="LossGivenDefault", column_ead="Amount", calculate_el=True)
 
         if show_cali_plots:
             plot_calibration(y_sample, predictions_sample["PD"], show_cal_table=False, plot_title="uncalibrated sample", bins = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
@@ -577,7 +576,7 @@ def compare_calibration_methods(X_sample, y_sample, calibration_methods, pipelin
         print("-" * 40)
         print(f"applying pipeline...")
 
-        predictions_sample = apply_pipe_PD(X_sample, pipeline, calculate_el=True)
+        predictions_sample = apply_pipe_PD(X_sample, pipeline, column_lgd="LossGivenDefault", column_ead="Amount", calculate_el=True)
 
         if show_cali_plots:
             plot_calibration(y_sample, predictions_sample["PD"], show_cal_table=False, plot_title="uncalibrated sample", bins = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
@@ -648,7 +647,7 @@ def compare_calibration_methods(X_sample, y_sample, calibration_methods, pipelin
 
 # process: estimate EL and CAP over different PD thresholds
 
-def estimate_capital_reduction(df, thresholds, verbose=False):
+def estimate_capital_reduction(df, thresholds, column_lgd, column_def, column_ead, verbose=False):
 
     from src.modelling import estimate_capital
 
@@ -672,7 +671,13 @@ def estimate_capital_reduction(df, thresholds, verbose=False):
         df_approved = df[approved]
 
         print('running Monte-Carlo... ', 'PD threshold: ', t)
-        result_df, loss_sum, el_sum, _ = estimate_capital(df_approved, method="monte-carlo", column_lgd="LossGivenDefault", allocate=False, verbose=False)
+        result_df, loss_sum, el_sum, _ = estimate_capital(df_approved,  
+                                                          method="monte-carlo", 
+                                                          column_lgd=column_lgd, 
+                                                          column_def=column_def, 
+                                                          column_ead=column_ead, 
+                                                          allocate=False, 
+                                                          verbose=False)
 
         pd_thresholds.append(t)   
         approval_rates.append(approval_rate)     
