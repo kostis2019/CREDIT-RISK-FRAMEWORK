@@ -39,7 +39,7 @@ def test_time_split():
     y_TEST  = splits["TEST"]["y"]
 
     X_TRAIN_expected = pd.DataFrame({
-        "a_date"  : [2017  ,2018   ],
+        #"a_date"  : [2017  ,2018   ], because date column is excluded now
         "feature1": [0.1   ,0.2    ],
         "feature2": ['hot' ,'hot'  ],
     })
@@ -50,7 +50,7 @@ def test_time_split():
     )
 
     X_TEST_expected = pd.DataFrame({
-        "a_date"  : [2019   ],
+        #"a_date"  : [2019   ],       because date column is excluded now
         "feature1": [0.3    ],
         "feature2": ['cold' ],
     })

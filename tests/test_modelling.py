@@ -9,7 +9,7 @@ def test_estimate_el():
         "Amount": [1000, 2000, 10000],
     })
 
-    result = estimate_el(df)
+    result = estimate_el(df, "LGD", "Amount")
 
     expected = [40.0, 200.0, 150.0]
 
