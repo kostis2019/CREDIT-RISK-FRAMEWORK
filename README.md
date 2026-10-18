@@ -1,40 +1,38 @@
-### Credit Risk Modelling Framework
+# Credit Risk Modelling Framework
 
-#### Introduction
+A modular Python framework for developing, validating, and applying credit-risk models from Probability of Default (PD) through portfolio risk and credit decisioning. It started from a concrete application-time credit-risk modelling problem and evolved into a reusable framework for the broader credit-risk lifecycle.
 
-This project is a modular Python framework for developing, calibrating, validating, and analysing application-time Probability of Default (PD) and Loss Given Default (LGD) models for unsecured consumer lending. It implements an end-to-end credit risk workflow, from data preprocessing and feature engineering to model calibration, portfolio decisioning, performance evaluation, and expected loss analysis.
+## Overview
 
-The framework has been designed with reusability in mind. Instead of isolated notebooks, the core functionality is organised into reusable Python modules, making it easy to train new models, compare modelling strategies, evaluate different decision thresholds, and extend the framework with additional monitoring and governance capabilities.
+The framework covers:
 
-The project is inspired by real-world credit risk modelling workflows used in financial institutions and aims to bridge the gap between exploratory data science notebooks and a reusable production-style machine learning framework.
+⚫ PD model development and temporal validation<br>
+⚫ PD calibration and recalibration<br>
+⚫ LGD estimation and EAD integration<br>
+⚫ Expected Loss (EL) analysis<br>
+⚫ Monte Carlo portfolio loss simulation and Economic Capital<br>
+⚫ Credit-policy and PD-threshold analysis<br>
+⚫ Model diagnostics, explainability and fairness<br>
+⚫ Input drift monitoring<br>
+⚫ Automated testing and CI<br>
 
 <p align="center">
-  <img src="figures/framework_summary_new.png" width="600">
+  <img src="figures/framework_summary_new.png" width="500">
 </p>
 
-**A sample portfolio risk report is available [here](slides/reports/First_Report.pdf), showcasing the framework's portfolio overview, risk analysis, and credit strategy results.**
+## Recommended Walkthrough
 
-#### The framework answers questions such as:
+For a first look at the framework:
 
-⚫ How can a robust application-time Probability of Default (PD) model be developed from historical lending data?<br>
-⚫ Which preprocessing and feature engineering steps are required before modelling?<br>
-⚫ How do Logistic Regression and Gradient Boosting compare for application-time PD modelling?<br>
-⚫ How well calibrated are the predicted probabilities?<br>
-⚫ Which calibration technique provides the best probability estimates?<br>
-⚫ How can an optimal PD acceptance threshold be selected?<br>
-⚫ What is the impact of different approval thresholds on Approval Rate, Default Rate and Expected Loss?<br>
-⚫ How can application-time Loss Given Default (LGD) be estimated using empirical and modelling approaches?<br>
-⚫ How can portfolio Expected Loss (EL) be quantified and visualized?<br>
-⚫ How can portfolio loss distributions be estimated using Monte Carlo simulation?<br>
-⚫ How can Value-at-Risk (VaR) and Economic Capital be estimated from simulated portfolio losses?<br>
-⚫ How can Monte Carlo estimates be validated against deterministic Expected Loss?<br>
-⚫ How can portfolio Economic Capital be allocated back to individual exposures?<br>
-🟢 How can application-time LGD modelling be further improved?<br>
-⚪ How can Population Stability Index (PSI) and feature drift be monitored?<br>
-⚪ How can model governance and monitoring dashboards support retraining decisions?<br>
-⚪ How can correlated defaults be incorporated into the Monte Carlo simulation?<br>
-⚪ How can macroeconomic scenarios and stress testing be incorporated?<br>
-⚪ How can the framework be executed through configuration files?<br>
-⚪ How can the framework be deployed as an API?<br>
+1. **[The First Case-Study](notebooks/00_first_case_study.ipynb)** — the initial business problem and the first modelling approach.
+2. **[The PD Pipeline](notebooks/02_PD_pipeline.ipynb)** — the generalized PD modelling workflow.
+3. **[Portfolio Risk Report](slides/reports/First_Report.pdf)** — portfolio risk, capital and credit-policy analysis.
 
-**Status:** ⚫ Implemented | 🟢 In Progress | ⚪ Planned
+## Future Extensions
+
+Planned extensions include:
+
+⚪ Stochastic LGD modelling<br>
+⚪ Reverse Monte Carlo / inverse portfolio-risk analysis<br>
+⚪ Configuration driven execution-retraining<br>
+⚪ Model health dashboard<br>
