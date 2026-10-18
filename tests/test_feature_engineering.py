@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.feature_engineering import FeatureSelector
+from src.feature_engineering import GetFeatures
 
 def test_featureselector():
 
@@ -13,7 +13,7 @@ def test_featureselector():
 
     selected_features = ["feature1", "feature2"]
 
-    selector = FeatureSelector(selected_features)
+    selector = GetFeatures(selected_features)
 
     result = selector.fit_transform(df)
 
