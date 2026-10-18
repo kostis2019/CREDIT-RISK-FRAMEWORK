@@ -365,9 +365,9 @@ class SpecialMappingsMortgage(BaseEstimator, TransformerMixin):
 
         return X
 
-# select features (selects pre-defined selected features)
+# get features (selects pre-defined selected features)
 
-class FeatureSelector(BaseEstimator, TransformerMixin):
+class GetFeatures(BaseEstimator, TransformerMixin):
     
     def __init__(self, selected_features):
         self.selected_features = selected_features

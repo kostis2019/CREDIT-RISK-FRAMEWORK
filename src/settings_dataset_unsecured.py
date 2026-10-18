@@ -51,6 +51,8 @@ FEATURES = {
     "DebtOccuredOn":                         {"type": "date",        "pd_eligible": False, "lgd_eligible": None},
     "DebtOccuredOnForSecondary":             {"type": "date",        "pd_eligible": False, "lgd_eligible": None},
     "DebtToIncome":                          {"type": "numeric",     "pd_eligible": True,  "lgd_eligible": True},
+    "EL_V0":                                 {"type": "numeric",     "pd_eligible": False, "lgd_eligible": False},    
+    "EL_V1":                                 {"type": "numeric",     "pd_eligible": False, "lgd_eligible": False},
     "DefaultDate":                           {"type": "date",        "pd_eligible": False, "lgd_eligible": None},
     "EAD1":                                  {"type": None,          "pd_eligible": None,  "lgd_eligible": None},
     "EAD2":                                  {"type": None,          "pd_eligible": None,  "lgd_eligible": None},
@@ -97,8 +99,8 @@ FEATURES = {
     "ModelVersion":                          {"type": None,          "pd_eligible": None,  "lgd_eligible": None},
     "MonthlyPayment":                        {"type": "numeric",     "pd_eligible": True,  "lgd_eligible": None},
     "MonthlyPaymentDay":                     {"type": "numeric",     "pd_eligible": True,  "lgd_eligible": None},
-    "NewCreditCustomer":                     {"type": "categorical", "pd_eligible": True,  "lgd_eligible": None},
-    "NextPaymentDate":                       {"type": "date",        "pd_eligible": False, "lgd_eligible": None},
+    "NewCreditCustomer":                     {"type": "numeric",     "pd_eligible": True,  "lgd_eligible": None},
+    "NextPaymentDate":                       {"type": "date",        "pd_eligible": None,  "lgd_eligible": None},
     "NextPaymentNr":                         {"type": None,          "pd_eligible": None,  "lgd_eligible": None},
     "NoOfPreviousLoansBeforeLoan":           {"type": "numeric",     "pd_eligible": True,  "lgd_eligible": None},
     "NrOfDependants":                        {"type": None,          "pd_eligible": None,  "lgd_eligible": None},
@@ -126,7 +128,7 @@ FEATURES = {
     "RefinanceLiabilities":                  {"type": "numeric",     "pd_eligible": True,  "lgd_eligible": None},
     "RecoveryStage":                         {"type": None,          "pd_eligible": None,  "lgd_eligible": None},
     "ReportAsOfEOD":                         {"type": "date",        "pd_eligible": False, "lgd_eligible": None},
-    "RescheduledOn":                         {"type": "date",        "pd_eligible": False, "lgd_eligible": None},
+    "ReScheduledOn":                         {"type": "date",        "pd_eligible": False, "lgd_eligible": None},
     "Restructured":                          {"type": None,          "pd_eligible": None,  "lgd_eligible": None},
     "StageActiveSince":                      {"type": "date",        "pd_eligible": False, "lgd_eligible": None},
     "Status":                                {"type": None,          "pd_eligible": None,  "lgd_eligible": None},
@@ -136,7 +138,7 @@ FEATURES = {
     "WorseLateCategory":                     {"type": None,          "pd_eligible": None,  "lgd_eligible": None},
 }
 
-# 1st ITERATION FEATURES FOR PD TRAINING
+# historical lists used in tests
 
 PD_FIRST_ITERATION_FEATURES = [
     "NewCreditCustomer",
@@ -186,4 +188,15 @@ PD_FIRST_ITERATION_FEATURES = [
     "PreviousEarlyRepaymentsBefoleLoan",
     "PreviousEarlyRepaymentsCountBeforeLoan",
     "Country",
+]
+
+PD_EXCLUDE_FEATURES = [
+    COLUMN_DATE,
+    COLUMN_TARGET_DATE,
+    COLUMN_YEAR,
+    "Country",
+    "CreditScoreEsMicroL",
+    "NrOfDependants",
+    "LoanApplicationStartedDate",
+    "FirstPaymentDate",
 ]
