@@ -26,13 +26,14 @@ For a first look at the framework:
 
 1. **[The First Case-Study](notebooks/00_first_case_study.ipynb)** — the initial business problem and the first modelling approach.
 2. **[The PD Pipeline](notebooks/02_PD_pipeline.ipynb)** — the generalized PD modelling workflow.
-3. **[Portfolio Risk Report](slides/reports/First_Report.pdf)** — portfolio risk, capital and credit-policy analysis.
+3. **[Portfolio Risk Report](slides/reports/First_Report.pdf)** — portfolio overview, risk, and capital analysis.
 
 ## Future Extensions
 
 Planned extensions include:
 
 ⚪ Stochastic LGD modelling<br>
-⚪ Reverse Monte Carlo / inverse portfolio-risk analysis<br>
+⚪ Dedicated EAD modelling<br>
+⚪ Inverse portfolio-risk analysis<br>
 ⚪ Configuration driven execution-retraining<br>
 ⚪ Model health dashboard<br>
