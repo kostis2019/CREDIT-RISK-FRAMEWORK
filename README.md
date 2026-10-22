@@ -33,7 +33,8 @@ For a first look at the framework:
 
 Planned extensions include:
 
-⚪ Stochastic LGD modelling (in progress)<br>
+⚪ Stochastic LGD modelling (done)<br>
+⚪ Stochastic LGD integration into capital workflow (in progress)<br>
 ⚪ Dedicated EAD modelling<br>
 ⚪ Inverse portfolio-risk analysis<br>
 ⚪ Configuration driven execution-retraining<br>

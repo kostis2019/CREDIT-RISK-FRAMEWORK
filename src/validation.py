@@ -53,7 +53,8 @@ def validate_predictions(df, verbose=True):
 
 # function: best model selector
 
-def model_selector(experiment_metrics, metric="CORR"):
+def model_selector(experiment_metrics, metric="CORR", higher_is_better=True):
+
     """
     Select the best model based on validation performance.
 
@@ -61,12 +62,17 @@ def model_selector(experiment_metrics, metric="CORR"):
     ----------
     experiment_metrics : pd.DataFrame
         Output table containing TRAIN and TEST metrics.
+
     metric : str
         Metric to use (default: CORR).
+
+    higher_is_better : bool
+        Whether higher values of the metric indicate better performance.
 
     Returns
     -------
     selection_table : pd.DataFrame
+
     best_model : pd.DataFrame
     """
 
@@ -86,21 +92,24 @@ def model_selector(experiment_metrics, metric="CORR"):
     )
 
     # remove preprocessing prefixes
-    selection_table["Variable"] = (selection_table["Variable"].str.replace("num__", "", regex=False).str.replace("cat__", "", regex=False))
+    selection_table["Variable"] = (
+        selection_table["Variable"]
+        .str.replace("num__", "", regex=False)
+        .str.replace("cat__", "", regex=False)
+    )
 
     # generalization gap
     selection_table["Generalization Gap"] = (
-        selection_table[f"Train {metric}"] -
-        selection_table[f"Test {metric}"]
+        selection_table[f"Train {metric}"]
+        - selection_table[f"Test {metric}"]
     ).abs()
 
-    # select best model:
-    # highest validation metric, then smallest gap
+    # select best model
     best_model = (
         selection_table
         .sort_values(
             by=[f"Test {metric}", "Generalization Gap"],
-            ascending=[False, True]
+            ascending=[not higher_is_better, True]
         )
         .head(1)
     )

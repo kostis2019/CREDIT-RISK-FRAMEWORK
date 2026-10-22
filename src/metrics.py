@@ -8,6 +8,7 @@ from sklearn.metrics import (
     root_mean_squared_error,
     r2_score,
 )
+from scipy.stats import ks_2samp
 
 # function: KS statistic
 
@@ -209,6 +210,11 @@ def calculate_regression_metrics(y_obs, y_pred, dataset_name="", verbose=True):
     r2   = r2_score(y_obs, y_pred)
 
     # -------------------------
+    # KS statistic 
+    # -------------------------    
+    ks_stat, p_value = ks_2samp(y_obs, y_pred)   
+
+    # -------------------------
     # dictionary
     # -------------------------
     metrics = {
@@ -217,6 +223,7 @@ def calculate_regression_metrics(y_obs, y_pred, dataset_name="", verbose=True):
         "RMSE"        : rmse,
         "CORR"        : corr,
         "R2"          : r2,
+        "KS"          : ks_stat,
     }
 
     # -------------------------
@@ -230,6 +237,7 @@ def calculate_regression_metrics(y_obs, y_pred, dataset_name="", verbose=True):
         print(f"RMSE        : {rmse:.3f}")
         print(f"CORR        : {corr:.3f}")
         print(f"R2          : {r2:.3f}")
+        print(f"KS          : {ks_stat:.3f}")
         print("-" * 40)
 
     return metrics
