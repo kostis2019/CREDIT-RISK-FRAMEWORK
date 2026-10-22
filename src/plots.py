@@ -753,18 +753,23 @@ def plot_lgd_distribution_comparison(df):
 
     ### RIGHT PLOT
 
+    # use amount column
+    amount_col = next((c for c in ["Amount", "num__Amount"] if c in df.columns), None)
+    if amount_col is None:
+        print('Amount column not found...')
+
     # exposure bands
     bands       = [0, 1000, 2500, 5000, 7500, 10000, 20000, np.inf]
     band_labels = ["0–1k", "1–2.5k", "2.5–5k", "5–7.5k", "7.5–10k", "10–20k", ">20k"]
 
-    df["amount_bin"] = pd.cut(df["Amount"], bins=bands, labels=band_labels, include_lowest=True)
+    df["amount_bin"] = pd.cut(df[amount_col], bins=bands, labels=band_labels, include_lowest=True)
 
     summary = (
     df.groupby("amount_bin", observed=False)
       .agg(
           est=("LGD", "mean"),
           rea=("LossGivenDefault", "mean"),
-          counts=("Amount", "count"),
+          counts=(amount_col, "count"),
       )
       .reset_index()
     )
@@ -834,6 +839,16 @@ def plot_variable_explore(ds, variable, column_year, breaks=[]):
     )
 
     plt.plot(summary.index, summary["mean"], marker="o", linewidth=2, label="Mean", color='black')
+
+    for x, y in zip(summary.index, summary["mean"]):
+        plt.annotate(
+            f"{y:.2f}",
+            (x, y),
+            xytext=(0, 8),
+            textcoords="offset points",
+            ha="center",
+            fontsize=8
+        )
 
     for x in breaks:
         plt.axvline(x, color="gray", linestyle="--", alpha=0.7)

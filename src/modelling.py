@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from scipy.stats import alpha
 from src.metrics import calculate_monte_carlo_metrics
 from IPython.display import display
 
@@ -157,9 +158,9 @@ def fit_lgd(lgd_dataset, method, one_value=0.15, one_variable=None, verbose=Fals
     if method == "linear_regression":
 
         # model X
-        model_X = lgd_dataset.drop(columns=["LossGivenDefault", "num__default12"]) # REVIEW LATER!
+        model_X = lgd_dataset.drop(columns=["LossGivenDefault"]) # REVIEW LATER!
         # model y
-        model_y = lgd_dataset["LossGivenDefault"]                                  # REVIEW LATER!
+        model_y = lgd_dataset["LossGivenDefault"]                                  
         # model
         model = LinearRegression()
         # fit
@@ -172,9 +173,9 @@ def fit_lgd(lgd_dataset, method, one_value=0.15, one_variable=None, verbose=Fals
     if method == "gradient_boosting_regression":
 
         # model X
-        model_X = lgd_dataset.drop(columns=["LossGivenDefault", "num__default12"]) # REVIEW LATER!
+        model_X = lgd_dataset.drop(columns=["LossGivenDefault", "num__default12"], errors="ignore") # REVIEW LATER!
         # model y
-        model_y = lgd_dataset["LossGivenDefault"]                                  # REVIEW LATER!
+        model_y = lgd_dataset["LossGivenDefault"]                             
         # model
         model = xgboost.XGBRegressor()
         # fit
@@ -183,6 +184,13 @@ def fit_lgd(lgd_dataset, method, one_value=0.15, one_variable=None, verbose=Fals
         impo = pd.Series(model.feature_importances_, index=model_X.columns).sort_values(ascending=False)
         if verbose:
             print(impo)
+
+    if method == "stochastic":
+
+        # model y
+        model_y = lgd_dataset["LossGivenDefault"]
+        # fit 
+        lgd_model = {"method": method, "model": fit_stochastic_lgd(model_y, verbose)}
 
     return lgd_model
 
@@ -236,7 +244,93 @@ def transform_lgd(df, lgd_model):
         df["LGD"] = lgd_model["model"].predict(model_X)
         df["LGD"] = df["LGD"].clip(0, 1)
 
+    if method == "stochastic":
+
+        model_X = df.drop(columns=["LossGivenDefault", "num__default12"], errors="ignore") # REVIEW LATER!
+        df["LGD"] = transform_stochastic_lgd(model_X, lgd_model)
+        df["LGD"] = df["LGD"].clip(0, 1)
+
     return df
+
+# function: fit stochastic LGD
+
+def fit_stochastic_lgd(model_y, verbose=False):
+
+    # import
+    from scipy.stats import beta
+
+    # Zero-inflation
+    pi_zero = (model_y == 0).mean()
+
+    # Positive LGDs
+    lgd_positive = model_y[model_y > 0]
+
+    # Fit Beta distribution to positive LGDs
+    alpha, beta_param, loc, scale = beta.fit(
+        lgd_positive,
+        floc=0,
+        fscale=1
+    )
+
+    if verbose:
+        empirical_mean = lgd_positive.mean()
+        beta_mean = beta.mean(alpha, beta_param)
+
+        empirical_variance = lgd_positive.var()
+        beta_variance = beta.var(alpha, beta_param)
+
+        quantiles = [0.10, 0.25, 0.50, 0.75, 0.90]
+        empirical_q = lgd_positive.quantile(quantiles)
+        beta_q = beta.ppf(
+            quantiles,
+            alpha,
+            beta_param
+        )
+
+        print(f"Zero LGD probability:     {pi_zero:.4f}")
+        print(f"Positive LGD probability: {1 - pi_zero:.4f}")
+
+        print("\nPositive LGD distribution:")
+        print(f"  Empirical mean:     {empirical_mean:.4f}")
+        print(f"  Beta mean:          {beta_mean:.4f}")
+        print(f"  Empirical variance: {empirical_variance:.6f}")
+        print(f"  Beta variance:      {beta_variance:.6f}")
+
+        print("\nQuantile | Empirical | Beta")
+        for q, e, f in zip(quantiles, empirical_q, beta_q):
+            print(f"{q:.2f} | {e:.4f} | {f:.4f}")
+
+    return {
+    "pi_zero": pi_zero,
+    "alpha":   alpha,
+    "beta":    beta_param,
+    }
+
+# function: transform stochastic LGD
+
+def transform_stochastic_lgd(df, lgd_model):
+
+    # import
+    from scipy.stats import beta
+
+    # random numbers
+    u = np.random.random(len(df))
+
+    # set all to -> 0 first
+    lgd = np.zeros(len(df))
+
+    # read beta model parameters
+    pi_zero    = lgd_model["model"]["pi_zero"]
+    alpha      = lgd_model["model"]["alpha"]
+    beta_param = lgd_model["model"]["beta"]
+
+    # distinguish lgd positive part
+    positive = u >= pi_zero
+
+    # transform lgd positive part
+    lgd[positive] = beta.rvs(alpha, beta_param, size=positive.sum())
+
+    return lgd
 
 # function: estimate capital
 

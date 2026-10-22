@@ -88,7 +88,7 @@ def time_split(df, date_column, windows, target, features_excl=None, verbose=Tru
                 print("\nYear distribution")
                 print(split["df"][date_column].value_counts().sort_index())
 
-                print(f"\nDefault rate : {split['y'].mean():.4f}")
+                print(f"\nTarget mean : {split['y'].mean():.4f}")
                 print("-" * 60)
 
         return splits
