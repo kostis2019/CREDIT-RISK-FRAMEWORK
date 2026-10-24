@@ -394,3 +394,33 @@ class GetFeatures(BaseEstimator, TransformerMixin):
             self.feature_names = pd.Index([f"f{i}" for i in range(X.shape[1])])
         
         return X[self.selected_features]
+
+# legacy class (needed by v012 PD_pipelines)
+
+class FeatureSelector(BaseEstimator, TransformerMixin):
+    
+    def __init__(self, selected_features):
+        self.selected_features = selected_features
+    
+    def fit(self, X, y=None):
+        # infer feature names automatically
+        if isinstance(X, pd.DataFrame):
+            self.feature_names = X.columns
+        else:
+            # fallback if numpy array
+            self.feature_names = [f"f{i}" for i in range(X.shape[1])]
+        
+        missing = [f for f in self.selected_features if f not in self.feature_names]
+        if missing:
+            raise ValueError(f"Missing features: {missing}")
+        
+        return self
+    
+    def transform(self, X):
+
+        if isinstance(X, pd.DataFrame):
+            self.feature_names = X.columns
+        else:
+            self.feature_names = pd.Index([f"f{i}" for i in range(X.shape[1])])
+        
+        return X[self.selected_features]
