@@ -543,7 +543,7 @@ def plot_el_heatmap(df):
 
 # plot: comparison of various calibrations
 
-def plot_calibration_comparison(y_true, pd_pred_raw, pd_pred_1, pd_pred_2, pd_pred_3, label_1='1', label_2='2', label_3='3', title="Recalibration:"):
+def plot_calibration_comparison(y_true, pd_pred_raw, pd_pred_1, pd_pred_2, pd_pred_3, label_1='1', label_2='2', label_3='3', title="Recalibration:", show_table=False):
 
     # inputs: 
     #         y_true        observations
@@ -605,9 +605,10 @@ def plot_calibration_comparison(y_true, pd_pred_raw, pd_pred_1, pd_pred_2, pd_pr
     # Share of portfolio (BY NUMBER OF LOANS)
     table["Share_of_Portfolio"] = table["Count"] / table["Count"].sum()
 
-    # print table
+    # display table
     table = table.reset_index()
-    display(table.style.hide(axis="index")) 
+    if show_table:
+        display(table.style.hide(axis="index")) 
 
     # save table:
     # table.to_csv("calibration_table.csv", index=False)
