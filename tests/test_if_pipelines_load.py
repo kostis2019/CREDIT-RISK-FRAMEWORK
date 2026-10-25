@@ -1,4 +1,4 @@
-import pickle
+import joblib
 
 def test_pipeline_loading():
 
@@ -13,7 +13,6 @@ def test_pipeline_loading():
 
         print('testing pipeline:', pipeline_path)
 
-        with open(pipeline_path, "rb") as f:
-            pipeline = pickle.load(f)
+        pipeline = joblib.load(pipeline_path)
 
         assert pipeline is not None, f"Failed to load {pipeline_path}"
