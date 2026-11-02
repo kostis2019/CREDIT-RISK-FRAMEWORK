@@ -899,3 +899,342 @@ def explain_model(pipeline, X_raw):
         raise ValueError(
             f"Explainability not implemented for {model_type}"
         )
+
+# process: estimate EL and CAP over different PD stress factors
+
+def estimate_reverse_capital_stress(df, threshold, stress_factors, column_lgd, column_def, column_ead, verbose=False):
+
+    from src.modelling import estimate_capital
+
+    # initial PDs (un-stressed)
+    probab = df["PD"]
+
+    stress_factor      = []
+    mean_pd            = []
+    portfolio_ead      = []
+    expected_loss_det  = []
+    expected_loss_mc   = []
+    economic_capital   = []
+
+    loss_mean            = []
+    loss_dev             = []
+    loss_var95           = []
+    loss_var999          = []
+    loss_dev_theoretical = []
+
+    # DEFINE APPROVED PORTFOLIO
+
+    approved = probab <= threshold
+    df_approved = df.loc[approved].copy()
+
+    # LOOP OVER PD STRESS FACTORS
+
+    for s in stress_factors:
+
+        # always start from the original PDs
+        df_stressed = df_approved.copy()
+
+        # stress pds
+        df_stressed["PD"] = (df_approved["PD"] * s).clip(upper=1.0)
+
+        # run monte-carlo: print
+        if verbose:
+            print('running Monte-Carlo... ', 'PD stress factor: ', s)
+            print(' PD ', ' min: ', f'{df_stressed["PD"].min():.4f}', ' mean: ', f'{df_stressed["PD"].mean():.4f}', ' max: ', f'{df_stressed["PD"].max():.4f}')
+        
+        # run monte-carlo
+        result_df, loss_sum, el_sum, _ = estimate_capital(df_stressed,  
+                                                          method="monte-carlo", 
+                                                          column_lgd=column_lgd, 
+                                                          column_def=column_def, 
+                                                          column_ead=column_ead, 
+                                                          allocate=False, 
+                                                          verbose=False)
+
+        # calculate theoretical loss dev
+        loss_dev_theo = np.sqrt(
+            (
+                (df[column_ead] * df[column_lgd]) ** 2
+                * df_stressed["PD"]
+                * (1 - df_stressed["PD"])
+            ).sum()
+        )
+
+        # append results
+        stress_factor.append(s)
+        mean_pd.append(df_stressed["PD"].mean())        
+        portfolio_ead.append(df_stressed[column_ead].sum())  
+        expected_loss_det.append(result_df["EL"].sum())  
+        expected_loss_mc.append(el_sum["EL (MC-simulated)"])   
+        economic_capital.append(loss_sum["Economic Capital"])
+        loss_mean.append(loss_sum["Loss (mean)"])
+        loss_dev.append(loss_sum["Loss (std)"])
+        loss_var95.append(loss_sum["VaR 95%"])
+        loss_var999.append(loss_sum["VaR 99.9%"])
+        loss_dev_theoretical.append(loss_dev_theo)
+
+    results = pd.DataFrame({
+        "PD Threshold":        threshold,
+        "Stress Factor":       stress_factor,
+        "Mean PD"      :       mean_pd,
+        "Portfolio EAD":       portfolio_ead,
+        "Expected Loss":       expected_loss_det,
+        "Expected Loss (MC)":  expected_loss_mc,
+        "Economic Capital":    economic_capital,
+        "Loss (mean)":         loss_mean,
+        "Loss (dev)":          loss_dev,
+        "VaR 95%":             loss_var95,
+        "VaR 99.9%":           loss_var999,
+        "Loss (dev) (theory)": loss_dev_theoretical,
+        })
+    
+    results_display = results.copy()
+    results_display["Portfolio EAD"]      /= 1e6
+    results_display["Expected Loss"]      /= 1e6
+    results_display["Expected Loss (MC)"] /= 1e6
+    results_display["Economic Capital"]   /= 1e3
+
+    if verbose:
+        display(
+            results_display.style
+            .format({
+                "PD Threshold":        "{:.2f}",
+                "Stress Factor":       "{:.2f}",
+                "Mean PD":             "{:.2f}",
+                "Portfolio EAD":       "{:.1f} M€",
+                "Expected Loss":       "{:.2f} M€",
+                "Expected Loss (MC)":  "{:.2f} M€",
+                "Economic Capital":    "{:.0f} k€",
+                "Loss (mean)":         "{:.0f}",
+                "Loss (dev)":          "{:.0f}",
+                "VaR 95%":             "{:.0f}",
+                "VaR 99.9%":           "{:.0f}",
+                "Loss (dev) (theory)": "{:.0f}",
+            })
+            .hide(axis="index")
+            )      
+
+    return results
+
+# show plots of reverse monte-carlo process
+
+def show_pd_stress_vs_capital(table, show_plot=True, invert_y=True):
+
+    capital       = table["Economic Capital"]
+    expected_loss = table["Expected Loss"]
+    pd_stress     = table["Stress Factor"]
+    mean_pd       = table["Mean PD"]
+
+    capital       = np.array(capital) / 1000          # (k€)
+    expected_loss = np.array(expected_loss) / 1000000 # (M€)
+    pd_stress     = np.array(pd_stress)
+
+    # PLOT
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 3))
+
+    # Economic Capital
+
+    ax1.plot(pd_stress, capital, color="#512DA8", marker='s',
+             label='Economic Capital')
+
+    from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+    ax1.xaxis.set_major_locator(MultipleLocator(0.5))
+    ax1.xaxis.set_major_formatter(FormatStrFormatter("%.1f"))
+
+    if invert_y:
+        ax1.invert_yaxis()
+
+    ax1.set_xlabel("PD stress factor", fontsize=10)
+    ax1.set_ylabel("Economic Capital (k€)", fontsize=10, color="#512DA8")
+    ax1.grid(True, alpha=0.2, linewidth=0.8)
+
+    # Expected Loss
+
+    ax2.plot(pd_stress, expected_loss, color="#B39DDB", marker='o',
+             label="Expected Loss")
+
+    ax2.xaxis.set_major_locator(MultipleLocator(0.5))
+    ax2.xaxis.set_major_formatter(FormatStrFormatter("%.1f"))
+
+    if invert_y:
+        ax2.invert_yaxis()
+
+    ax2.set_xlabel("PD stress factor", fontsize=10)
+    ax2.set_ylabel("Expected Loss (M€)", fontsize=10, color="#B39DDB")
+    ax2.grid(True, alpha=0.2, linewidth=0.8)
+
+    # Top x-axis: mean PD
+
+    this_color = "black"
+
+    for ax in [ax1, ax2]:
+
+        ax_top = ax.twiny()
+        ax_top.set_xlim(ax.get_xlim())
+        ax_top.set_xticks(pd_stress)
+        ax_top.set_xticklabels(
+            [f"{x:.2f}" for x in mean_pd],
+            fontweight="bold",
+            color=this_color
+        )
+        ax_top.tick_params(axis='x', labelsize=7, pad=2, color=this_color)
+        ax_top.set_xlabel(
+            "Mean PD",
+            fontsize=10,
+            labelpad=4,
+            fontweight="bold",
+            color=this_color
+        )
+
+        # Top ticks: every 0.5 stress factor
+        top_ticks = np.arange(1.0, 5.01, 0.5)
+        ax_top.set_xticks(top_ticks)
+
+    # Legend
+
+    ax1.legend(loc="lower right")
+    ax2.legend(loc="lower right")
+
+    plt.tight_layout()
+
+    # Apply slide style
+
+    from src.utils import apply_slide_style
+    apply_slide_style(ax1)
+    apply_slide_style(ax2)
+
+    if show_plot:
+        plt.show()
+    else:
+        plt.close(fig)
+
+    return fig
+
+# show plots of reverse monte-carlo process 
+
+def show_pd_stress_vs_lossdev(table, show_plot=True, invert_y=True):
+
+    loss_mean     = table["Loss (mean)"]
+    loss_var95    = table["VaR 95%"]
+    loss_var999   = table["VaR 99.9%"]
+    loss_dev      = table["Loss (dev)"]
+    loss_dev_theo = table["Loss (dev) (theory)"]
+    pd_stress     = table["Stress Factor"]
+    mean_pd       = table["Mean PD"]   
+
+    loss_mean     = np.array(loss_mean)   / 1000000 # (M€)
+    loss_var95    = np.array(loss_var95)  / 1000000 # (M€)
+    loss_var999   = np.array(loss_var999) / 1000000 # (M€)    
+    loss_dev      = np.array(loss_dev)       / 1000 # (k€)
+    loss_dev_theo = np.array(loss_dev_theo)  / 1000 # (k€)
+    pd_stress     = np.array(pd_stress)
+
+    # ratio_1: EC/EL
+    ratio_1 = (loss_var999-loss_mean) / loss_mean
+    # ratio_2: EC/LossStdDev
+    ratio_2 = (loss_var999-loss_mean) *1000 / loss_dev
+
+    # PLOT
+
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 3))
+
+    # plot 1:
+
+    # y axis: loss dev (theory)
+
+    ax1.plot(pd_stress, loss_dev_theo , color="black", label='Loss StdDev (theory)', linestyle="--")
+
+    # y axis: loss dev
+
+    ax1.plot(pd_stress, loss_dev      , color="black", label="Loss StdDev (simulation)", linestyle="-")
+
+    if invert_y:
+        ax1.invert_yaxis()
+
+    ax1.set_xlabel("PD stress factor" , fontsize=10)
+    ax1.set_ylabel( "Loss StDev (k€)" , fontsize=10, color="black")
+    ax1.grid(True, alpha=0.2, linewidth=0.8)
+
+    # plot 2:
+
+    # y axis: loss mean, var95, var99.9
+
+    ax2.plot(pd_stress, loss_mean   , color="black", label='Loss Mean     ', linestyle="-")
+    ax2.plot(pd_stress, loss_var95  , color="black", label="Loss VaR 95   ", linestyle="--")
+    ax2.plot(pd_stress, loss_var999 , color="black", label="Loss VaR 99.9 ", linestyle="-.")
+
+    if invert_y:
+        ax2.invert_yaxis()
+
+    ax2.set_xlabel("PD stress factor" , fontsize=10)
+    ax2.set_ylabel( "Loss (M€)" , fontsize=10, color="black")
+    ax2.grid(True, alpha=0.2, linewidth=0.8)
+
+    # plot 3:
+
+    # y axis: ratios
+
+    ax3.plot(pd_stress, ratio_1 , color="black", label='EC / EL', linestyle="-.")
+    ax3.plot(pd_stress, ratio_2 , color="black", label='EC / Loss StdDev', linestyle=":")
+
+    if invert_y:
+        ax3.invert_yaxis()
+
+    ax3.set_xlabel("PD stress factor" , fontsize=10)
+    ax3.set_ylabel( "ratio (x)" , fontsize=10, color="black")
+    ax3.grid(True, alpha=0.2, linewidth=0.8)
+
+    # bottom x-axis: PD stress factor, every 0.5
+
+    from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+    for ax in [ax1, ax2, ax3]:
+        ax.xaxis.set_major_locator(MultipleLocator(0.5))
+        ax.xaxis.set_major_formatter(FormatStrFormatter("%.1f"))
+
+    # Top x-axis: mean PD
+
+    this_color = "black"
+    for ax in [ax1, ax2, ax3]:
+
+        ax_top = ax.twiny()
+        ax_top.set_xlim(ax.get_xlim())
+        ax_top.set_xticks(pd_stress)
+        ax_top.set_xticklabels(
+            [f"{x:.2f}" for x in mean_pd],
+            fontweight="bold",
+            color=this_color
+        )
+        ax_top.tick_params(axis='x', labelsize=7, pad=2, color=this_color)
+        ax_top.set_xlabel(
+            "Mean PD",
+            fontsize=10,
+            labelpad=4,
+            fontweight="bold",
+            color=this_color
+        )
+
+        # Top ticks: every 0.5 stress factor
+        top_ticks = np.arange(1.0, 5.01, 0.5)
+        ax_top.set_xticks(top_ticks)
+
+    # Legend
+
+    for ax in [ax1, ax2, ax3]:
+        ax.legend(loc="lower right")    
+
+    plt.tight_layout()
+
+    # Apply slide style
+
+    from src.utils import apply_slide_style
+    apply_slide_style(ax1)
+    apply_slide_style(ax2)
+    apply_slide_style(ax3)    
+
+    if show_plot:
+        plt.show()
+    else:
+        plt.close(fig)
+
+    return fig
