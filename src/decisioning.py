@@ -1,13 +1,14 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 import shap
 from IPython.display import display
 from src.calibration import intercept_recalibration, PDCalibrator
 from src.metrics import calculate_metrics
-from src.modelling import apply_pipe_PD
+from src.modelling import apply_pipe_PD, estimate_capital
 from src.plots import plot_calibration
-from src.utils import display_table
+from src.utils import display_table, apply_slide_style
 
 # plot: pd threshold investigation and plot
 
@@ -902,9 +903,7 @@ def explain_model(pipeline, X_raw):
 
 # process: estimate EL and CAP over different PD stress factors
 
-def estimate_reverse_capital_stress(df, threshold, stress_factors, column_lgd, column_def, column_ead, verbose=False):
-
-    from src.modelling import estimate_capital
+def estimate_reverse_capital_stress(df, threshold, stress_factors, column_lgd, column_def, column_ead, verbose=False, seed=42):
 
     # initial PDs (un-stressed)
     probab = df["PD"]
@@ -921,6 +920,8 @@ def estimate_reverse_capital_stress(df, threshold, stress_factors, column_lgd, c
     loss_var95           = []
     loss_var999          = []
     loss_dev_theoretical = []
+
+    seeds                = []
 
     # DEFINE APPROVED PORTFOLIO
 
@@ -949,7 +950,8 @@ def estimate_reverse_capital_stress(df, threshold, stress_factors, column_lgd, c
                                                           column_def=column_def, 
                                                           column_ead=column_ead, 
                                                           allocate=False, 
-                                                          verbose=False)
+                                                          verbose=False,
+                                                          seed=seed)
 
         # calculate theoretical loss dev
         loss_dev_theo = np.sqrt(
@@ -972,11 +974,12 @@ def estimate_reverse_capital_stress(df, threshold, stress_factors, column_lgd, c
         loss_var95.append(loss_sum["VaR 95%"])
         loss_var999.append(loss_sum["VaR 99.9%"])
         loss_dev_theoretical.append(loss_dev_theo)
+        seeds.append(seed)
 
     results = pd.DataFrame({
         "PD Threshold":        threshold,
         "Stress Factor":       stress_factor,
-        "Mean PD"      :       mean_pd,
+        "Mean PD":             mean_pd,
         "Portfolio EAD":       portfolio_ead,
         "Expected Loss":       expected_loss_det,
         "Expected Loss (MC)":  expected_loss_mc,
@@ -986,6 +989,7 @@ def estimate_reverse_capital_stress(df, threshold, stress_factors, column_lgd, c
         "VaR 95%":             loss_var95,
         "VaR 99.9%":           loss_var999,
         "Loss (dev) (theory)": loss_dev_theoretical,
+        "Seed":                seed
         })
     
     results_display = results.copy()
@@ -1025,9 +1029,13 @@ def show_pd_stress_vs_capital(table, show_plot=True, invert_y=True):
     pd_stress     = table["Stress Factor"]
     mean_pd       = table["Mean PD"]
 
-    capital       = np.array(capital) / 1000          # (k€)
-    expected_loss = np.array(expected_loss) / 1000000 # (M€)
+    capital       = np.array(capital) / 1000           # (k€)
+    expected_loss = np.array(expected_loss) / 1000000  # (M€)
     pd_stress     = np.array(pd_stress)
+    mean_pd       = np.array(mean_pd)
+
+    # Check if multiple seed experiment
+    has_seeds = "Seed" in table.columns
 
     # PLOT
 
@@ -1035,10 +1043,43 @@ def show_pd_stress_vs_capital(table, show_plot=True, invert_y=True):
 
     # Economic Capital
 
-    ax1.plot(pd_stress, capital, color="#512DA8", marker='s',
-             label='Economic Capital')
+    if has_seeds:
 
-    from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+        capital_curves = []
+
+        for seed, group in table.groupby("Seed"):
+
+            group = group.sort_values("Stress Factor")
+
+            x = group["Stress Factor"].to_numpy()
+            y = group["Economic Capital"].to_numpy() / 1000
+
+            capital_curves.append(y)
+
+            ax1.plot(
+                x, y,
+                color="grey",
+                alpha=0.30,
+                linewidth=0.7
+            )
+
+        capital_mean = np.mean(capital_curves, axis=0)
+
+        ax1.plot(
+            x, capital_mean,
+            color="#512DA8",
+            linewidth=2,
+            label="Mean Economic Capital"
+        )
+
+    else:
+
+        ax1.plot(
+            pd_stress, capital,
+            color="#512DA8",
+            label="Economic Capital"
+        )
+
     ax1.xaxis.set_major_locator(MultipleLocator(0.5))
     ax1.xaxis.set_major_formatter(FormatStrFormatter("%.1f"))
 
@@ -1051,8 +1092,42 @@ def show_pd_stress_vs_capital(table, show_plot=True, invert_y=True):
 
     # Expected Loss
 
-    ax2.plot(pd_stress, expected_loss, color="#B39DDB", marker='o',
-             label="Expected Loss")
+    if has_seeds:
+
+        loss_curves = []
+
+        for seed, group in table.groupby("Seed"):
+
+            group = group.sort_values("Stress Factor")
+
+            x = group["Stress Factor"].to_numpy()
+            y = group["Expected Loss"].to_numpy() / 1000000
+
+            loss_curves.append(y)
+
+            ax2.plot(
+                x, y,
+                color="grey",
+                alpha=0.20,
+                linewidth=0.7
+            )
+
+        loss_mean = np.mean(loss_curves, axis=0)
+
+        ax2.plot(
+            x, loss_mean,
+            color="#B39DDB",
+            linewidth=2,
+            label="Expected Loss"
+        )
+
+    else:
+
+        ax2.plot(
+            pd_stress, expected_loss,
+            color="#B39DDB",
+            label="Expected Loss"
+        )
 
     ax2.xaxis.set_major_locator(MultipleLocator(0.5))
     ax2.xaxis.set_major_formatter(FormatStrFormatter("%.1f"))
@@ -1067,18 +1142,26 @@ def show_pd_stress_vs_capital(table, show_plot=True, invert_y=True):
     # Top x-axis: mean PD
 
     this_color = "black"
+    top_ticks = np.arange(1.0, 5.01, 0.5)
+
+    mean_pd_ticks = np.interp(top_ticks, pd_stress, mean_pd)
 
     for ax in [ax1, ax2]:
 
         ax_top = ax.twiny()
         ax_top.set_xlim(ax.get_xlim())
-        ax_top.set_xticks(pd_stress)
+        ax_top.set_xticks(top_ticks)
+
         ax_top.set_xticklabels(
-            [f"{x:.2f}" for x in mean_pd],
+            [f"{x:.2f}" for x in mean_pd_ticks],
             fontweight="bold",
             color=this_color
         )
-        ax_top.tick_params(axis='x', labelsize=7, pad=2, color=this_color)
+
+        ax_top.tick_params(
+            axis="x", labelsize=7, pad=2, color=this_color
+        )
+
         ax_top.set_xlabel(
             "Mean PD",
             fontsize=10,
@@ -1086,10 +1169,6 @@ def show_pd_stress_vs_capital(table, show_plot=True, invert_y=True):
             fontweight="bold",
             color=this_color
         )
-
-        # Top ticks: every 0.5 stress factor
-        top_ticks = np.arange(1.0, 5.01, 0.5)
-        ax_top.set_xticks(top_ticks)
 
     # Legend
 
@@ -1101,6 +1180,7 @@ def show_pd_stress_vs_capital(table, show_plot=True, invert_y=True):
     # Apply slide style
 
     from src.utils import apply_slide_style
+
     apply_slide_style(ax1)
     apply_slide_style(ax2)
 
@@ -1121,116 +1201,341 @@ def show_pd_stress_vs_lossdev(table, show_plot=True, invert_y=True):
     loss_dev      = table["Loss (dev)"]
     loss_dev_theo = table["Loss (dev) (theory)"]
     pd_stress     = table["Stress Factor"]
-    mean_pd       = table["Mean PD"]   
+    mean_pd       = table["Mean PD"]
 
-    loss_mean     = np.array(loss_mean)   / 1000000 # (M€)
-    loss_var95    = np.array(loss_var95)  / 1000000 # (M€)
-    loss_var999   = np.array(loss_var999) / 1000000 # (M€)    
-    loss_dev      = np.array(loss_dev)       / 1000 # (k€)
-    loss_dev_theo = np.array(loss_dev_theo)  / 1000 # (k€)
+    loss_mean     = np.array(loss_mean) / 1000000
+    loss_var95    = np.array(loss_var95) / 1000000
+    loss_var999   = np.array(loss_var999) / 1000000
+    loss_dev      = np.array(loss_dev) / 1000
+    loss_dev_theo = np.array(loss_dev_theo) / 1000
     pd_stress     = np.array(pd_stress)
+    mean_pd       = np.array(mean_pd)
 
-    # ratio_1: EC/EL
-    ratio_1 = (loss_var999-loss_mean) / loss_mean
-    # ratio_2: EC/LossStdDev
-    ratio_2 = (loss_var999-loss_mean) *1000 / loss_dev
+    # Check if multiple seed experiment
+
+    has_seeds = "Seed" in table.columns
 
     # PLOT
 
     fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 3))
 
-    # plot 1:
+    # --------------------------------------------------
+    # Plot 1: Loss standard deviation
+    # --------------------------------------------------
 
-    # y axis: loss dev (theory)
+    if has_seeds:
 
-    ax1.plot(pd_stress, loss_dev_theo , color="black", label='Loss StdDev (theory)', linestyle="--")
+        dev_curves = []
 
-    # y axis: loss dev
+        for seed, group in table.groupby("Seed"):
 
-    ax1.plot(pd_stress, loss_dev      , color="black", label="Loss StdDev (simulation)", linestyle="-")
+            group = group.sort_values("Stress Factor")
+
+            x = group["Stress Factor"].to_numpy()
+            y = group["Loss (dev)"].to_numpy() / 1000
+
+            dev_curves.append(y)
+
+            ax1.plot(
+                x, y,
+                color="grey",
+                alpha=0.30,
+                linewidth=0.7
+            )
+
+        dev_mean = np.mean(dev_curves, axis=0)
+
+        ax1.plot(
+            x, dev_mean,
+            color="black",
+            linewidth=1.8,
+            label="Loss StdDev (mean simulation)"
+        )
+
+        # Theoretical SD: same across seeds
+
+        theo_mean = (
+            table.groupby("Stress Factor")["Loss (dev) (theory)"]
+            .mean()
+        )
+
+        ax1.plot(
+            theo_mean.index,
+            theo_mean.to_numpy() / 1000,
+            color="black",
+            linestyle="--",
+            label="Loss StdDev (theory)"
+        )
+
+    else:
+
+        ax1.plot(
+            pd_stress, loss_dev_theo,
+            color="black",
+            label="Loss StdDev (theory)",
+            linestyle="--"
+        )
+
+        ax1.plot(
+            pd_stress, loss_dev,
+            color="black",
+            label="Loss StdDev (simulation)",
+            linestyle="-"
+        )
 
     if invert_y:
         ax1.invert_yaxis()
 
-    ax1.set_xlabel("PD stress factor" , fontsize=10)
-    ax1.set_ylabel( "Loss StDev (k€)" , fontsize=10, color="black")
+    ax1.set_xlabel("PD stress factor", fontsize=10)
+    ax1.set_ylabel("Loss StDev (k€)", fontsize=10)
     ax1.grid(True, alpha=0.2, linewidth=0.8)
 
-    # plot 2:
+    # --------------------------------------------------
+    # Plot 2: Mean loss and VaR
+    # --------------------------------------------------
 
-    # y axis: loss mean, var95, var99.9
+    if has_seeds:
 
-    ax2.plot(pd_stress, loss_mean   , color="black", label='Loss Mean     ', linestyle="-")
-    ax2.plot(pd_stress, loss_var95  , color="black", label="Loss VaR 95   ", linestyle="--")
-    ax2.plot(pd_stress, loss_var999 , color="black", label="Loss VaR 99.9 ", linestyle="-.")
+        var95_curves = []
+        var999_curves = []
+
+        for seed, group in table.groupby("Seed"):
+
+            group = group.sort_values("Stress Factor")
+
+            x = group["Stress Factor"].to_numpy()
+
+            y95 = group["VaR 95%"].to_numpy() / 1000000
+            y999 = group["VaR 99.9%"].to_numpy() / 1000000
+
+            var95_curves.append(y95)
+            var999_curves.append(y999)
+
+            ax2.plot(
+                x, y95,
+                color="grey",
+                alpha=0.20,
+                linewidth=0.7
+            )
+
+            ax2.plot(
+                x, y999,
+                color="grey",
+                alpha=0.30,
+                linewidth=0.7
+            )
+
+        var95_mean = np.mean(var95_curves, axis=0)
+        var999_mean = np.mean(var999_curves, axis=0)
+
+        # Deterministic expected loss
+
+        loss_mean_group = (
+            table.groupby("Stress Factor")["Expected Loss"]
+            .mean()
+        )
+
+        ax2.plot(
+            loss_mean_group.index,
+            loss_mean_group.to_numpy() / 1000000,
+            color="black",
+            label="Loss Mean",
+            linestyle="-"
+        )
+
+        ax2.plot(
+            x, var95_mean,
+            color="black",
+            label="Loss VaR 95 (mean)",
+            linestyle="--",
+            linewidth=1.5
+        )
+
+        ax2.plot(
+            x, var999_mean,
+            color="black",
+            label="Loss VaR 99.9 (mean)",
+            linestyle="-.",
+            linewidth=1.5
+        )
+
+    else:
+
+        ax2.plot(
+            pd_stress, loss_mean,
+            color="black",
+            label="Loss Mean",
+            linestyle="-"
+        )
+
+        ax2.plot(
+            pd_stress, loss_var95,
+            color="black",
+            label="Loss VaR 95",
+            linestyle="--"
+        )
+
+        ax2.plot(
+            pd_stress, loss_var999,
+            color="black",
+            label="Loss VaR 99.9",
+            linestyle="-."
+        )
 
     if invert_y:
         ax2.invert_yaxis()
 
-    ax2.set_xlabel("PD stress factor" , fontsize=10)
-    ax2.set_ylabel( "Loss (M€)" , fontsize=10, color="black")
+    ax2.set_xlabel("PD stress factor", fontsize=10)
+    ax2.set_ylabel("Loss (M€)", fontsize=10)
     ax2.grid(True, alpha=0.2, linewidth=0.8)
 
-    # plot 3:
+    # --------------------------------------------------
+    # Plot 3: EC / EL and EC / Loss SD
+    # --------------------------------------------------
 
-    # y axis: ratios
+    if has_seeds:
 
-    ax3.plot(pd_stress, ratio_1 , color="black", label='EC / EL', linestyle="-.")
-    ax3.plot(pd_stress, ratio_2 , color="black", label='EC / Loss StdDev', linestyle=":")
+        ratio1_curves = []
+        ratio2_curves = []
+
+        for seed, group in table.groupby("Seed"):
+
+            group = group.sort_values("Stress Factor")
+
+            x = group["Stress Factor"].to_numpy()
+
+            ec = group["Economic Capital"].to_numpy()
+            el = group["Expected Loss"].to_numpy()
+            sd = group["Loss (dev)"].to_numpy()
+
+            r1 = ec / el
+            r2 = ec / sd
+
+            ratio1_curves.append(r1)
+            ratio2_curves.append(r2)
+
+            ax3.plot(
+                x, r1,
+                color="grey",
+                alpha=0.25,
+                linewidth=0.7
+            )
+
+            ax3.plot(
+                x, r2,
+                color="grey",
+                alpha=0.25,
+                linewidth=0.7
+            )
+
+        ratio1_mean = np.mean(ratio1_curves, axis=0)
+        ratio2_mean = np.mean(ratio2_curves, axis=0)
+
+        ax3.plot(
+            x, ratio1_mean,
+            color="black",
+            label="EC / EL (mean)",
+            linestyle="-."
+        )
+
+        ax3.plot(
+            x, ratio2_mean,
+            color="black",
+            label="EC / Loss StdDev (mean)",
+            linestyle=":"
+        )
+
+    else:
+
+        ratio_1 = (loss_var999 - loss_mean) / loss_mean
+        ratio_2 = (loss_var999 - loss_mean) * 1000 / loss_dev
+
+        ax3.plot(
+            pd_stress, ratio_1,
+            color="black",
+            label="EC / EL",
+            linestyle="-."
+        )
+
+        ax3.plot(
+            pd_stress, ratio_2,
+            color="black",
+            label="EC / Loss StdDev",
+            linestyle=":"
+        )
 
     if invert_y:
         ax3.invert_yaxis()
 
-    ax3.set_xlabel("PD stress factor" , fontsize=10)
-    ax3.set_ylabel( "ratio (x)" , fontsize=10, color="black")
+    ax3.set_xlabel("PD stress factor", fontsize=10)
+    ax3.set_ylabel("Dimensionless ratio", fontsize=10)
     ax3.grid(True, alpha=0.2, linewidth=0.8)
 
-    # bottom x-axis: PD stress factor, every 0.5
+    # --------------------------------------------------
+    # X axes: PD stress factor
+    # --------------------------------------------------
 
-    from matplotlib.ticker import MultipleLocator, FormatStrFormatter
     for ax in [ax1, ax2, ax3]:
+
         ax.xaxis.set_major_locator(MultipleLocator(0.5))
         ax.xaxis.set_major_formatter(FormatStrFormatter("%.1f"))
 
-    # Top x-axis: mean PD
+    # --------------------------------------------------
+    # Top x-axis: Mean PD
+    # --------------------------------------------------
 
-    this_color = "black"
+    top_ticks = np.arange(1.0, 5.01, 0.5)
+
+    mean_pd_group = (
+        table.groupby("Stress Factor")["Mean PD"]
+        .mean()
+    )
+
+    mean_pd_ticks = np.interp(
+        top_ticks,
+        mean_pd_group.index.to_numpy(),
+        mean_pd_group.to_numpy()
+    )
+
     for ax in [ax1, ax2, ax3]:
 
         ax_top = ax.twiny()
         ax_top.set_xlim(ax.get_xlim())
-        ax_top.set_xticks(pd_stress)
+        ax_top.set_xticks(top_ticks)
+
         ax_top.set_xticklabels(
-            [f"{x:.2f}" for x in mean_pd],
+            [f"{x:.2f}" for x in mean_pd_ticks],
             fontweight="bold",
-            color=this_color
+            color="black"
         )
-        ax_top.tick_params(axis='x', labelsize=7, pad=2, color=this_color)
+
+        ax_top.tick_params(
+            axis="x",
+            labelsize=7,
+            pad=2,
+            color="black"
+        )
+
         ax_top.set_xlabel(
             "Mean PD",
             fontsize=10,
             labelpad=4,
             fontweight="bold",
-            color=this_color
+            color="black"
         )
 
-        # Top ticks: every 0.5 stress factor
-        top_ticks = np.arange(1.0, 5.01, 0.5)
-        ax_top.set_xticks(top_ticks)
-
-    # Legend
+    # --------------------------------------------------
+    # Legends and styling
+    # --------------------------------------------------
 
     for ax in [ax1, ax2, ax3]:
-        ax.legend(loc="lower right")    
+        ax.legend(loc="lower right")
 
     plt.tight_layout()
 
-    # Apply slide style
-
-    from src.utils import apply_slide_style
     apply_slide_style(ax1)
     apply_slide_style(ax2)
-    apply_slide_style(ax3)    
+    apply_slide_style(ax3)
 
     if show_plot:
         plt.show()
@@ -1238,3 +1543,122 @@ def show_pd_stress_vs_lossdev(table, show_plot=True, invert_y=True):
         plt.close(fig)
 
     return fig
+
+# EC summary for seeds experiments
+
+def ec_summary(results_all, print_table=True):
+
+    # --------------------------------------------------
+    # Aggregate Monte Carlo results across seeds
+    # --------------------------------------------------
+
+    metrics = [
+        "Economic Capital",
+        "VaR 99.9%",
+        "VaR 95%",
+        "Loss (dev)",
+        "Loss (mean)"
+    ]
+
+    summary = (
+        results_all
+        .groupby("Stress Factor")[metrics]
+        .agg(["mean", "std", "min", "max"])
+    )
+
+    # Flatten column names
+    summary.columns = [
+        f"{metric}_{stat}"
+        for metric, stat in summary.columns
+    ]
+
+    # --------------------------------------------------
+    # Coefficient of variation
+    # --------------------------------------------------
+
+    for metric in metrics:
+
+        summary[f"{metric}_CV"] = (
+            summary[f"{metric}_std"] /
+            summary[f"{metric}_mean"]
+        )
+
+    # --------------------------------------------------
+    # 5th and 95th percentiles across seeds
+    # --------------------------------------------------
+
+    for metric in ["Economic Capital", "VaR 99.9%"]:
+
+        quantiles = (
+            results_all
+            .groupby("Stress Factor")[metric]
+            .quantile([0.05, 0.95])
+            .unstack()
+        )
+
+        summary[f"{metric}_p05"] = quantiles[0.05]
+        summary[f"{metric}_p95"] = quantiles[0.95]
+
+    # --------------------------------------------------
+    # Executive summary
+    # --------------------------------------------------
+
+    ec_mean = summary["Economic Capital_mean"]
+    var_mean = summary["VaR 99.9%_mean"]
+
+    peak_stress = ec_mean.idxmax()
+    peak_ec = ec_mean.max()
+
+    baseline_ec = ec_mean.iloc[0]
+    final_ec = ec_mean.iloc[-1]
+
+    baseline_el = results_all.groupby(
+        "Stress Factor"
+    )["Expected Loss"].mean().iloc[0]
+
+    final_el = results_all.groupby(
+        "Stress Factor"
+    )["Expected Loss"].mean().iloc[-1]
+
+    baseline_var = var_mean.iloc[0]
+    final_var = var_mean.iloc[-1]
+
+    n_seeds = results_all["Seed"].nunique()
+
+    print("\n========== MONTE CARLO STRESS SUMMARY ==========\n")
+
+    print(f"Number of seeds:             {n_seeds}")
+    print(f"Stress scenarios:            {len(summary)}")
+
+    print("\n--- Expected Loss ---")
+
+    print(f"Baseline EL:                 €{baseline_el:,.0f}")
+    print(f"Final EL:                    €{final_el:,.0f}")
+    print(f"EL increase:                 {(final_el / baseline_el - 1)*100:.1f}%")
+
+    print("\n--- Economic Capital ---")
+
+    print(f"Baseline EC:                 €{baseline_ec:,.0f}")
+    print(f"Maximum mean EC:             €{peak_ec:,.0f}")
+    print(f"Peak stress factor:          {peak_stress:.1f}x")
+    print(f"Final EC:                    €{final_ec:,.0f}")
+    print(f"EC change from peak:         {(final_ec / peak_ec - 1)*100:.1f}%")
+
+    print("\n--- VaR 99.9% ---")
+
+    print(f"Baseline VaR:                €{baseline_var:,.0f}")
+    print(f"Final VaR:                   €{final_var:,.0f}")
+    print(f"Baseline VaR CV:             {summary['VaR 99.9%_CV'].iloc[0]*100:.2f}%")
+    print(f"Final VaR CV:                {summary['VaR 99.9%_CV'].iloc[-1]*100:.2f}%")
+
+    print("\n--- EC variability ---")
+
+    print(f"Baseline EC CV:              {summary['Economic Capital_CV'].iloc[0]*100:.2f}%")
+    print(f"Peak EC CV:                  {summary.loc[peak_stress, 'Economic Capital_CV']*100:.2f}%")
+
+    print("\n================================================\n")
+
+    if print_table:
+        display(summary.round(3))
+
+    return summary

@@ -334,7 +334,7 @@ def transform_stochastic_lgd(df, lgd_model):
 
 # function: estimate capital
 
-def estimate_capital(df, method, column_lgd, column_def, column_ead, allocate= False, verbose=False):
+def estimate_capital(df, method, column_lgd, column_def, column_ead, allocate= False, verbose=False, seed=42):
 
     df = df.copy()
 
@@ -366,7 +366,7 @@ def estimate_capital(df, method, column_lgd, column_def, column_ead, allocate= F
         
         # Monte-Carlo: initialise
 
-        rng = np.random.default_rng(seed=42)
+        rng = np.random.default_rng(seed=seed)
         n_simulations = 10000
 
         sim_dr           = []
