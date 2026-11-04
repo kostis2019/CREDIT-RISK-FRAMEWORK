@@ -1544,6 +1544,37 @@ def show_pd_stress_vs_lossdev(table, show_plot=True, invert_y=True):
 
     return fig
 
+# define seeds experiment
+
+def run_reverse_capital_stress_seeds(df, threshold, stress_factors, column_lgd, column_def, column_ead, seeds=None):
+
+    if seeds is None:
+        seeds = [42, 123, 456, 789, 2026]
+
+    all_results = []
+
+    for seed in seeds:
+
+        print(f"Running Experiment with seed={seed}")
+
+        results = estimate_reverse_capital_stress(df, 
+                                                 threshold, 
+                                                 stress_factors,
+                                                 column_lgd=column_lgd,
+                                                 column_def=column_def,
+                                                 column_ead=column_ead,
+                                                 verbose=False,
+                                                 seed=seed)
+
+        all_results.append(results)
+
+    results_all = pd.concat(
+        all_results,
+        ignore_index=True
+    )
+
+    return results_all
+
 # EC summary for seeds experiments
 
 def ec_summary(results_all, print_table=True):
