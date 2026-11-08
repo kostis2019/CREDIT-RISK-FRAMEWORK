@@ -120,3 +120,60 @@ class ReplaceMinusOne(BaseEstimator, TransformerMixin):
         X = X.replace("-1", np.nan)
 
         return X
+
+# make homogeneous LGD-EAD portfolio
+
+def make_homogeneous_portfolio(
+    df,
+    ead_col,
+    lgd_col,
+    pd_threshold,
+    ead_result_col="EAD_hom",
+    lgd_result_col="LGD_hom"
+):
+    """
+    Create a homogeneous approved portfolio while preserving
+    total EAD and baseline Expected Loss.
+
+    Approval criterion: PD <= pd_threshold.
+    Original PD heterogeneity is retained.
+    """
+
+    # Select approved portfolio
+    result = df.loc[df["PD"] <= pd_threshold].copy()
+
+    if result.empty:
+        raise ValueError("No observations satisfy the PD threshold.")
+
+    # Original approved portfolio characteristics
+    n = len(result)
+    total_ead = result[ead_col].sum()
+
+    baseline_el = (
+        result["PD"] *
+        result[ead_col] *
+        result[lgd_col]
+    ).sum()
+
+    # Homogeneous EAD
+    ead_const = total_ead / n
+
+    # Homogeneous LGD calibrated to preserve baseline EL
+    pd_sum = result["PD"].sum()
+
+    if ead_const <= 0 or pd_sum <= 0:
+        raise ValueError("Cannot calibrate homogeneous LGD.")
+
+    lgd_const = baseline_el / (ead_const * pd_sum)
+
+    if not 0 <= lgd_const <= 1:
+        raise ValueError(
+            f"Calibrated LGD ({lgd_const:.4f}) "
+            "is outside the valid range [0, 1]."
+        )
+
+    # Assign homogeneous values
+    result[ead_result_col] = ead_const
+    result[lgd_result_col] = lgd_const
+
+    return result
