@@ -55,11 +55,22 @@ def apply_pipe_LGD(df, pipeline):
 
     df = df.copy()
 
-    # preprocess
-    X = pipeline["preprocessor"].transform(df)
+    # preprocess (if available)
+    if "preprocessor" in pipeline:
+        X = pipeline["preprocessor"].transform(df)
+    else:
+        X = df.copy()
 
     # estimate LGD
-    X = transform_lgd(X, pipeline["model"])
+    if "method" in pipeline:
+        lgd_model = {
+            "method": pipeline["method"],
+            "model": pipeline["model"]
+        }
+    else:
+        lgd_model = pipeline["model"]
+
+    X = transform_lgd(X, lgd_model)
 
     # append
     df["LGD"] = X["LGD"]
