@@ -7,6 +7,7 @@ def test_pipeline_loading():
         "models/PIPELINE_PD_v012_LR_cal_shift-test.pkl",
         "models/PIPELINE_PD_v012_GB_cal_shift-test.pkl",
         "models/PIPELINE_LGD_v012_amount.pkl",
+        "models/PIPELINE_LGD_v013_stochastic.pkl",
     ]
 
     for pipeline_path in pipelines:
