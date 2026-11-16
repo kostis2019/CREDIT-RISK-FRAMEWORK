@@ -13,6 +13,7 @@ dependencies = [
     "pandas",
     "scipy",
     "scikit-learn",
+    "xgboost",
     "joblib",
     "ipython",
     "matplotlib",
@@ -22,7 +23,6 @@ dependencies = [
 
 [project.optional-dependencies]
 explainability = ["shap"]
-boosting = ["xgboost"]
 tracking = ["wandb"]
 pdf-preview = ["pymupdf", "pillow"]
 dev = ["pytest", "jupyter", "ipykernel"]
