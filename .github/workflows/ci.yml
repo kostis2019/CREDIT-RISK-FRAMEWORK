@@ -27,9 +27,9 @@ jobs:
         python -c "import sklearn"
         python -c "import numpy"
 
-    - name: Import src check
+    - name: Import check
       run: |
-        python -c "from src.preprocessing import *"
+        python -c "from credit_risk_framework.preprocessing import *"
 
     - name: Run tests
       run: |

@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.feature_engineering import GetFeatures
+from credit_risk_framework.feature_engineering import GetFeatures
 
 def test_featureselector():
 

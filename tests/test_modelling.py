@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.modelling import estimate_el
+from credit_risk_framework.modelling import estimate_el
 
 def test_estimate_el():
     df = pd.DataFrame({

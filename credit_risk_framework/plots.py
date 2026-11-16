@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 from matplotlib.ticker import FormatStrFormatter
 from IPython.display import display
-from src.utils import display_table
+from .utils import display_table
 
 # plot: correlation
 
@@ -271,7 +271,7 @@ def plot_calibration(y_true, pd_pred, dataset_name="", show_cal_table=False, plo
     ax.set_aspect("equal", adjustable="box")
 
     # apply slide style 
-    from src.utils import apply_slide_style
+    from .utils import apply_slide_style
     apply_slide_style(ax)
 
     # show plot now!
@@ -350,7 +350,7 @@ def plot_default_capture_curve(y_true, models, show=True):
     ax.grid(True)
 
     # Apply slide style
-    from src.utils import apply_slide_style
+    from .utils import apply_slide_style
     apply_slide_style(ax)
 
     plt.tight_layout()
@@ -999,7 +999,7 @@ def plot_heatmap(df, variable, column_lgd, show=True):
     ax.set_title(variables[variable]["title"])
 
     # Apply slide style
-    from src.utils import apply_slide_style
+    from .utils import apply_slide_style
     apply_slide_style(ax)
 
     plt.tight_layout()
@@ -1114,7 +1114,7 @@ def plot_loss_distribution(sim_losses, portfolio_amount, show_plot=True):
     )
 
     # apply slide style 
-    from src.utils import apply_slide_style
+    from .utils import apply_slide_style
     apply_slide_style(ax)
 
     plt.tight_layout()
@@ -1260,7 +1260,7 @@ def plot_distribution(df, variable):
     ax.tick_params(axis="both", labelsize=22)
 
     # apply slide style 
-    from src.utils import apply_slide_style
+    from .utils import apply_slide_style
     apply_slide_style(ax)
 
     plt.tight_layout()
