@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "credit-risk-framework"
+version = "0.1.0"
+description = "A modular Python framework for credit risk modelling and portfolio risk analysis."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+    "pandas",
+    "scipy",
+    "scikit-learn",
+    "joblib",
+    "ipython",
+    "matplotlib",
+    "seaborn",
+    "reportlab",
+]
+
+[project.optional-dependencies]
+explainability = ["shap"]
+boosting = ["xgboost"]
+tracking = ["wandb"]
+pdf-preview = ["pymupdf", "pillow"]
+dev = ["pytest", "jupyter", "ipykernel"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["credit_risk_framework*"]

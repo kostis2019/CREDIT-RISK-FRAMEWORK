@@ -2,13 +2,12 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
-import shap
 from IPython.display import display
-from src.calibration import intercept_recalibration, PDCalibrator
-from src.metrics import calculate_metrics
-from src.modelling import apply_pipe_PD, estimate_capital
-from src.plots import plot_calibration
-from src.utils import display_table, apply_slide_style
+from .calibration import intercept_recalibration, PDCalibrator
+from .metrics import calculate_metrics
+from .modelling import apply_pipe_PD, estimate_capital
+from .plots import plot_calibration
+from .utils import display_table, apply_slide_style
 
 # plot: pd threshold investigation and plot
 
@@ -97,7 +96,7 @@ def show_approval_vs_default_on_thresholds(y_true, pd_pred, pd_thresholds, title
         ax.invert_xaxis()
 
     # Apply slide style
-    from src.utils import apply_slide_style
+    from .utils import apply_slide_style
     apply_slide_style(ax)
 
     plt.tight_layout()
@@ -650,7 +649,7 @@ def compare_calibration_methods(X_sample, y_sample, calibration_methods, pipelin
 
 def estimate_capital_reduction(df, thresholds, column_lgd, column_def, column_ead, verbose=False):
 
-    from src.modelling import estimate_capital
+    from .modelling import estimate_capital
 
     probab = df["PD"]
 
@@ -769,7 +768,7 @@ def show_approval_vs_reduction(table, show_plot=True, invert_y=True):
     plt.tight_layout()
 
     # Apply slide style
-    from src.utils import apply_slide_style
+    from .utils import apply_slide_style
     apply_slide_style(ax)
 
     if show_plot:
@@ -844,6 +843,7 @@ def explain_model(pipeline, X_raw):
             X_explain = step.transform(X_explain)
 
         # run shap here !!
+        import shap
         explainer = shap.TreeExplainer(base_model)
         shap_values = explainer.shap_values(X_explain)
 
@@ -1179,7 +1179,7 @@ def show_pd_stress_vs_capital(table, show_plot=True, invert_y=True):
 
     # Apply slide style
 
-    from src.utils import apply_slide_style
+    from .utils import apply_slide_style
 
     apply_slide_style(ax1)
     apply_slide_style(ax2)
@@ -1960,7 +1960,7 @@ def show_experiment_comparison(
 
     plt.tight_layout()
 
-    from src.utils import apply_slide_style
+    from .utils import apply_slide_style
 
     apply_slide_style(ax1)
     apply_slide_style(ax2)

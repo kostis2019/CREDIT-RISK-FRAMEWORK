@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import alpha
-from src.metrics import calculate_monte_carlo_metrics
+from .metrics import calculate_monte_carlo_metrics
 from IPython.display import display
 
 # function: select n features using gb importance

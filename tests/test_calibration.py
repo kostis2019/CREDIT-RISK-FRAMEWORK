@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from src.calibration import intercept_recalibration
+from credit_risk_framework.calibration import intercept_recalibration
 
 def test_intercept_recalibration():
 

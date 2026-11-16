@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from src.preprocessing import ReplaceMinusOne, time_split
+from credit_risk_framework.preprocessing import ReplaceMinusOne, time_split
 
 def test_replaceminusone():
 
