@@ -1452,3 +1452,93 @@ def plot_drift(drift_results, variable):
     plt.tight_layout()
 
     return fig
+
+# plot pareto
+
+def plot_pareto(
+    policy_grid,
+    pareto_frontier,
+    benchmark_policy=None,
+    selected_policies=None
+):
+
+    fig, ax = plt.subplots(figsize=(5, 4))
+
+    # benchmark policy
+    if benchmark_policy is not None:
+        pd_max, ead_max = benchmark_policy
+        benchmark = policy_grid[(policy_grid["PD_max"] == pd_max) & (policy_grid["EAD_max"] == ead_max)]
+
+    # exclude benchmark policy from all policies
+    other_policies = policy_grid.drop(index=benchmark.index)
+
+    # all policies: coloured by total exposure
+    scatter = ax.scatter(
+        other_policies["Approval_rate"] * 100,
+        other_policies["Expected_Loss"] / 1_000_000,
+        c=other_policies["Exposure"] / 1_000_000,
+        cmap="viridis",
+        s=10,
+        label="All policies",
+    )
+
+    # colorbar: total exposure
+    plt.colorbar(scatter, ax=ax, label="Total Exposure (M€)")
+
+    # pareto
+    ax.plot(
+        pareto_frontier["Approval_rate"] * 100,
+        pareto_frontier["Expected_Loss"] / 1_000_000,
+        linewidth=1,
+        linestyle="-",
+        color="black",
+        label="Pareto frontier",
+    )
+
+    # highlight benchmark policy
+    if benchmark_policy is not None:
+        ax.scatter(
+            benchmark["Approval_rate"] * 100,
+            benchmark["Expected_Loss"] / 1_000_000,
+            marker="p",
+            s=40,
+            color="black",
+            label="Benchmark policy",
+        )
+
+    # highlight selected policies
+    if selected_policies is not None:
+        markers = ["D", "p", "^"]
+
+        for i, (pd_max, ead_max) in enumerate(selected_policies):
+
+            selected = pareto_frontier[
+                (pareto_frontier["PD_max"] == pd_max)
+                & (pareto_frontier["EAD_max"] == ead_max)
+            ]
+
+            if selected.empty:
+                continue
+
+            ax.scatter(
+                selected["Approval_rate"] * 100,
+                selected["Expected_Loss"] / 1_000_000,
+                marker=markers[i % len(markers)],
+                s=35,
+                facecolors="white",
+                edgecolors="black",
+                linewidths=1.5,
+                zorder=6,
+                label=f"Selected policy {i + 1}",
+            )
+
+    ax.set(
+        xlabel="Approval Rate (%)",
+        ylabel="Expected Loss (M€)",
+        title="Credit Policy Optimisation",
+    )
+
+    ax.grid(alpha=0.3)
+    ax.legend()
+    plt.tight_layout()
+    plt.show()

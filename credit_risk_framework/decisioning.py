@@ -1971,3 +1971,151 @@ def show_experiment_comparison(
         plt.close(fig)
 
     return fig
+
+# policy: create PD x EAD threshold grid
+
+def policy_create_grid(
+    portfolio,
+    pd_thresholds,
+    ead_thresholds,
+    column_pd,
+    column_ead,
+    column_lgd,
+    column_target,
+    show_table=True
+):
+
+    from itertools import product
+
+    # Required columns
+    required_columns = [
+        column_pd,
+        column_lgd,
+        column_ead,
+        column_target,
+    ]
+
+    missing_columns = [
+        col for col in required_columns
+        if col not in portfolio.columns
+    ]
+
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {missing_columns}")
+
+    # Validate modelling inputs
+    if portfolio[required_columns].isna().any().any():
+        raise ValueError("Missing values found in PD, LGD, EAD or target columns.")
+
+    if not portfolio["PD"].between(0, 1).all():
+        raise ValueError("PD values must be between 0 and 1.")
+
+    if not portfolio["LGD"].between(0, 1).all():
+        raise ValueError("LGD values must be between 0 and 1.")
+
+    # Baseline portfolio
+    n_total = len(portfolio)
+    total_exposure = portfolio[column_ead].sum()
+
+    # Evaluate all threshold combinations
+    grid_results = []
+
+    for pd_max, ead_max in product(pd_thresholds, ead_thresholds):
+
+        # Existing policy convention: strict less-than thresholds
+        approved_mask = ((portfolio[column_pd] < pd_max) & (portfolio[column_ead] < ead_max))
+
+        approved = portfolio.loc[approved_mask]
+
+        n_approved = len(approved)
+        exposure = approved[column_ead].sum()
+
+        # Deterministic expected loss
+        expected_loss = (
+            approved["PD"] * approved[column_ead] * approved["LGD"]).sum()
+
+        grid_results.append({
+            "PD_max": pd_max,
+            "EAD_max": ead_max,
+            "Approved_count": n_approved,
+            "Approval_rate": n_approved / n_total,
+            "Exposure": exposure,
+            "Exposure_share": exposure / total_exposure,
+            "Observed_DR": approved[column_target].mean(),
+            "Mean_PD": approved["PD"].mean(),
+            "Expected_Loss": expected_loss,
+            "EL_to_Exposure": (
+                expected_loss / exposure if exposure > 0 else float("nan")
+            ),
+        })
+
+    # Results table
+    policy_grid = pd.DataFrame(grid_results)
+
+    policy_grid = policy_grid.sort_values(
+        ["PD_max", "EAD_max"]
+    ).reset_index(drop=True)
+
+    print(f"Number of policies evaluated: {len(policy_grid)}")
+    if show_table:
+        display(policy_grid)
+
+    return policy_grid
+
+# policy: create pareto frontier (maximise approval rate, minimise expected loss)
+
+def policy_create_pareto(
+    policy_grid,
+    column_approval,
+    column_loss,
+    show_table=True
+):
+
+    # Remove policies with identical portfolio outcomes.
+    # Because the grid is sorted, the lower EAD cap is retained for ties.
+    pareto_candidates = policy_grid.drop_duplicates(
+        subset=["Approved_count", column_loss]
+    ).copy()
+
+    # A policy is dominated if another policy has:
+    # - at least as high an approval rate
+    # - no higher expected loss
+    # - and a strict improvement in at least one of these metrics
+
+    is_dominated = []
+
+    for _, candidate in pareto_candidates.iterrows():
+
+        dominates_candidate = (
+            (pareto_candidates[column_approval] >= candidate[column_approval])
+            & (pareto_candidates[column_loss] <= candidate[column_loss])
+            & (
+                (pareto_candidates[column_approval] > candidate[column_approval])
+                | (pareto_candidates[column_loss] < candidate[column_loss])
+            )
+        )
+
+        is_dominated.append(dominates_candidate.any())
+
+    pareto_frontier = pareto_candidates.loc[~pd.Series(is_dominated, index=pareto_candidates.index)].copy()
+
+    pareto_frontier = pareto_frontier.sort_values(column_approval).reset_index(drop=True)
+
+    if show_table:
+        display(
+            pareto_frontier[
+                [
+                    "PD_max",
+                    "EAD_max",
+                    "Approved_count",
+                    "Approval_rate",
+                    "Exposure",
+                    "Observed_DR",
+                    "Mean_PD",
+                    "Expected_Loss",
+                    "EL_to_Exposure",
+                ]
+            ]
+        )
+
+    return pareto_frontier
