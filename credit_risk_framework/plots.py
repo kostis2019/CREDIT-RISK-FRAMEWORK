@@ -1478,21 +1478,40 @@ def plot_pareto(
         other_policies["Expected_Loss"] / 1_000_000,
         c=other_policies["Exposure"] / 1_000_000,
         cmap="viridis",
-        s=10,
+        s=12,
+        alpha=0.45,
+        edgecolors="none",
         label="All policies",
     )
 
     # colorbar: total exposure
-    plt.colorbar(scatter, ax=ax, label="Total Exposure (M€)")
+    cbar = plt.colorbar(
+        scatter,
+        ax=ax,
+        fraction=0.035,
+        pad=0.04
+    )
+    cbar.set_label(
+        "Total Exposure (M€)",
+        fontsize=9,
+        color="grey"
+    )
+    cbar.ax.tick_params(
+        labelsize=8,
+        colors="grey",
+        length=2,
+        width=0.6
+    )
 
     # pareto
     ax.plot(
         pareto_frontier["Approval_rate"] * 100,
         pareto_frontier["Expected_Loss"] / 1_000_000,
-        linewidth=1,
+        linewidth=2,
         linestyle="-",
         color="black",
         label="Pareto frontier",
+        zorder=3,
     )
 
     # highlight benchmark policy
@@ -1501,14 +1520,16 @@ def plot_pareto(
             benchmark["Approval_rate"] * 100,
             benchmark["Expected_Loss"] / 1_000_000,
             marker="p",
-            s=40,
+            s=55,
             color="black",
-            label="Benchmark policy",
+            label="Base policy",
+            zorder=5,
         )
 
     # highlight selected policies
     if selected_policies is not None:
         markers = ["D", "p", "^"]
+        labels  = ["conservative", "balanced", "growth"]
 
         for i, (pd_max, ead_max) in enumerate(selected_policies):
 
@@ -1524,12 +1545,12 @@ def plot_pareto(
                 selected["Approval_rate"] * 100,
                 selected["Expected_Loss"] / 1_000_000,
                 marker=markers[i % len(markers)],
-                s=35,
+                s=55,
                 facecolors="white",
                 edgecolors="black",
                 linewidths=1.5,
-                zorder=6,
-                label=f"Selected policy {i + 1}",
+                zorder=5,
+                label=f"P{i+1}: {labels[i]}",
             )
 
     ax.set(
@@ -1539,6 +1560,13 @@ def plot_pareto(
     )
 
     ax.grid(alpha=0.3)
-    ax.legend()
+    ax.legend(
+    fontsize=9,
+    markerscale=0.85,
+    handletextpad=0.6,
+    labelspacing=0.4,
+    frameon=True,
+    framealpha=0.9,
+    edgecolor="lightgrey")
     plt.tight_layout()
     plt.show()

@@ -319,13 +319,16 @@ def fit_stochastic_lgd(model_y, verbose=False):
 
 # function: transform stochastic LGD
 
-def transform_stochastic_lgd(df, lgd_model):
+def transform_stochastic_lgd(df, lgd_model, random_state=42):
 
     # import
     from scipy.stats import beta
 
-    # random numbers
-    u = np.random.random(len(df))
+    # Initialise a reproducible random generator       TO BE REVIEWED
+    rng = np.random.default_rng(random_state)
+
+    # Generate random numbers using the same generator TO BE REVIEWED
+    u = rng.random(len(df))
 
     # set all to -> 0 first
     lgd = np.zeros(len(df))
@@ -339,7 +342,7 @@ def transform_stochastic_lgd(df, lgd_model):
     positive = u >= pi_zero
 
     # transform lgd positive part
-    lgd[positive] = beta.rvs(alpha, beta_param, size=positive.sum())
+    lgd[positive] = beta.rvs(alpha, beta_param, size=positive.sum(), random_state=rng)
 
     return lgd
 
